@@ -111,7 +111,7 @@ typedef uint8_t        byte_t;
 * @typedef  ssize_t
 * @brief  Signed size type. This is a POSIX specification.
 */
-#if ! defined( __GNUC__ )  ||  defined( __CC_ARM )
+#if ! defined( __GNUC__ )  ||  defined( __CC_ARM ) || (defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050))
 typedef int  ssize_t;
 #endif
 
@@ -128,7 +128,7 @@ typedef int  ssize_t;
 * @brief  osMailQId
 */
 #ifdef IS_CMSIS_USED
-typedef struct os_mailQ_cb *osMailQId;
+typedef void *osMailQId;
 #endif
 
 

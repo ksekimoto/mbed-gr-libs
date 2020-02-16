@@ -33,8 +33,19 @@
 
 WANDongleSerialPort::WANDongleSerialPort() : cb_tx_en(false), cb_rx_en(false), listener(NULL)
 {
+#if defined(TARGET_RZ_A2XX)
+  buf_out = (uint8_t *)AllocNonCacheMem(WANDONGLE_MAX_OUTEP_SIZE);
+  buf_in  = (uint8_t *)AllocNonCacheMem(WANDONGLE_MAX_INEP_SIZE);
+#endif
   reset();
 }
+
+#if defined(TARGET_RZ_A2XX)
+WANDongleSerialPort::~WANDongleSerialPort() {
+  FreeNonCacheMem(buf_out);
+  FreeNonCacheMem(buf_in);
+}
+#endif
 
 void WANDongleSerialPort::init(USBHost* pHost)
 {
@@ -90,7 +101,7 @@ int WANDongleSerialPort::readPacket()
   {
     //lock_rx.unlock();
     USB_ERR("host->bulkRead() returned %d", res);
-    Thread::wait(100);
+    ThisThread::sleep_for(100);
     return -1;
   }
   return 0;
@@ -123,7 +134,7 @@ int WANDongleSerialPort::writePacket()
   {
     //lock_tx.unlock();
     USB_ERR("host->bulkWrite() returned %d", res);
-    Thread::wait(100);
+    ThisThread::sleep_for(100);
     return -1;
   }
   return 0;
