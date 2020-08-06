@@ -99,12 +99,18 @@
   #define TF043HV001A0                (0x0005)
   #define ATM0430D25                  (0x0006)
   #define FG040346DSSWBG03            (0x0007)
+  #define EP952                       (0x0008)
 
   #define GR_PEACH_RSK_TFT            (RSK_TFT|LCD_LVDS)
   #define LVDS_TO_HDMI                (TFP410PAP|LCD_LVDS)
   #define DVI_STICK                   (TFP410PAP)
-  #define RGB_TO_HDMI                 (TFP410PAP)
-
+  
+  #if (1) /* GR-MANGO rev.B or later */
+    #define RGB_TO_HDMI               (EP952)
+  #else	/* GR-MANGO rev.A */
+    #define RGB_TO_HDMI               (TFP410PAP)
+  #endif 
+ 
   #ifndef MBED_CONF_APP_LCD_TYPE
     #if defined(TARGET_RZ_A1H)
       #define MBED_CONF_APP_LCD_TYPE    GR_PEACH_4_3INCH_SHIELD
