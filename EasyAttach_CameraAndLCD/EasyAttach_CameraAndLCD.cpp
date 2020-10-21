@@ -114,7 +114,7 @@ static const DisplayBase::lcd_config_t * lcd_port_init(DisplayBase& Display) {
     char i2cbuf[3];
     //wait 10ms before turning on ep952 
     DigitalOut ep952_rst(PK_5, 0);
-    ThisThread::sleep_for(0.01);
+    ThisThread::sleep_for(10ms);
     ep952_rst = 1;
   
     i2cbuf[0] = 0x00;
