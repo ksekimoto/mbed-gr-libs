@@ -34,7 +34,7 @@ public:
     /**
     * Constructor
     */
-    USBHostSerialPort();
+    USBHostSerialPort(uint32_t buf_size);
 
     /**
      * Destructor
@@ -107,7 +107,7 @@ public:
     virtual int writeBuf(const char* b, int s);
     virtual int readBuf(char* b, int s, int timeout = -1);
 
-protected:
+//protected:
     virtual int _getc();
     virtual int _putc(int c);
 
@@ -122,7 +122,7 @@ private:
 
     void init();
 
-    CircBufferHostSerial<uint8_t, (1024 * 32)> * p_circ_buf;
+    CircBufferHostSerial<uint8_t> * p_circ_buf;
 
     uint8_t * p_buf;
 
@@ -133,7 +133,13 @@ private:
         uint8_t data_bits;
     } PACKED LINE_CODING;
 
+#if defined(TARGET_RZ_A2XX)
+    LINE_CODING * p_line_coding;
+    uint8_t * p_buf_out;
+    uint8_t * p_buf_out_c;
+#else
     LINE_CODING line_coding;
+#endif
 
     void rxHandler();
     void txHandler();
@@ -148,7 +154,7 @@ private:
 class USBHostSerial : public IUSBEnumerator, public USBHostSerialPort
 {
 public:
-    USBHostSerial();
+    USBHostSerial(uint32_t buf_size = (1024 * 32));
 
     /**
      * Try to connect a serial device
@@ -159,11 +165,21 @@ public:
 
     void disconnect();
 
+    uint16_t get_vid() {
+        return _vid;
+    }
+
+    uint16_t get_pid() {
+        return _pid;
+    }
+
 protected:
     USBHost* host;
     USBDeviceConnected* dev;
     uint8_t port_intf;
     int ports_found;
+    uint16_t _vid;
+    uint16_t _pid;
 
     //From IUSBEnumerator
     virtual void setVidPid(uint16_t vid, uint16_t pid);
@@ -176,7 +192,7 @@ protected:
 
 class USBHostMultiSerial : public IUSBEnumerator {
 public:
-    USBHostMultiSerial();
+    USBHostMultiSerial(uint32_t buf_size = (1024 * 32));
     virtual ~USBHostMultiSerial();
 
     USBHostSerialPort* getPort(int port)
@@ -206,6 +222,7 @@ protected:
     USBHostSerialPort* ports[USBHOST_SERIAL];
     uint8_t port_intf[USBHOST_SERIAL];
     int ports_found;
+    uint32_t _buf_size;
 
     //From IUSBEnumerator
     virtual void setVidPid(uint16_t vid, uint16_t pid);

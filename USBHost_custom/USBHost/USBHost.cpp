@@ -53,7 +53,11 @@ void USBHost::usb_process() {
     bool interruptListState;
     USBEndpoint * ep;
     uint8_t i, j, res, timeout_set_addr = 10;
+#if defined(TARGET_RZ_A2XX)
+    uint8_t * buf = (uint8_t *)AllocNonCacheMem(8);
+#else
     uint8_t buf[8];
+#endif
     bool too_many_hub;
     int idx;
 
@@ -149,7 +153,7 @@ void USBHost::usb_process() {
                               break;
                           }
 
-                          Thread::wait(100);
+                          ThisThread::sleep_for(100);
                       }
 
                       USB_INFO("New device connected: %p [hub: %d - port: %d]", &devices[i], usb_msg->hub, usb_msg->port);
@@ -277,6 +281,10 @@ USBHost::USBHost() : usbThread(osPriorityNormal, USB_THREAD_STACK)
     }
 #endif
 
+#if defined(TARGET_RZ_A2XX)
+    setupPacket = (uint8_t *)AllocNonCacheMem(8);
+    data        = (uint8_t *)AllocNonCacheMem(415);
+#endif
     usbThread.start(callback(this, &USBHost::usb_process));
 }
 
@@ -322,13 +330,12 @@ void USBHost::transferCompleted(volatile uint32_t addr)
             if (((HCTD *)td)->control >> 28) {
                 state = ((HCTD *)td)->control >> 28;
             } else {
-                if (td->currBufPtr)
+                if (td->currBufPtr) {
                     ep->setLengthTransferred((uint32_t)td->currBufPtr - (uint32_t)ep->getBufStart());
+                }
                 state = 16 /*USB_TYPE_IDLE*/;
             }
 #endif
-            if (state == USB_TYPE_IDLE)
-                ep->setLengthTransferred((uint32_t)td->currBufPtr - (uint32_t)ep->getBufStart());
 
             ep->unqueueTransfer(td);
 
@@ -554,7 +561,7 @@ USB_TYPE USBHost::resetDevice(USBDeviceConnected * dev)
     int index = findDevice(dev);
     if (index != -1) {
         USB_DBG("Resetting hub %d, port %d\n", dev->getHub(), dev->getPort());
-        Thread::wait(100);
+        ThisThread::sleep_for(100);
         if (dev->getHub() == 0) {
             resetRootHub();
         }
@@ -563,7 +570,7 @@ USB_TYPE USBHost::resetDevice(USBDeviceConnected * dev)
             dev->getHubParent()->portReset(dev->getPort());
         }
 #endif
-        Thread::wait(100);
+        ThisThread::sleep_for(100);
         deviceReset[index] = true;
         return USB_TYPE_OK;
     }
@@ -886,7 +893,7 @@ USB_TYPE USBHost::enumerate(USBDeviceConnected * dev, IUSBEnumerator* pEnumerato
 
       pEnumerator->setVidPid( data[8] | (data[9] << 8), data[10] | (data[11] << 8) );
 
-      res = getConfigurationDescriptor(dev, data, sizeof(data), &total_conf_descr_length);
+      res = getConfigurationDescriptor(dev, data, 415, &total_conf_descr_length);
       if (res != USB_TYPE_OK) {
           return res;
       }
@@ -922,7 +929,7 @@ USB_TYPE USBHost::enumerate(USBDeviceConnected * dev, IUSBEnumerator* pEnumerato
     } while(0);
 
     // Some devices may require this delay
-    Thread::wait(100);
+    ThisThread::sleep_for(100);
 
     return USB_TYPE_OK;
 }

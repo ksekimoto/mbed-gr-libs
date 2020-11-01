@@ -16,6 +16,9 @@
 
 #include "cmsis.h"
 #include "dcache-control.h"
+#if defined(TARGET_RZ_A2XX)
+#include "r_cache_lld_rza2m.h"
+#endif
 
 void dcache_clean(void * p_buf, uint32_t size) {
     uint32_t start_addr = (uint32_t)p_buf & 0xFFFFFFE0;
@@ -24,8 +27,11 @@ void dcache_clean(void * p_buf, uint32_t size) {
 
     /* Data cache clean */
     for (addr = start_addr; addr < end_addr; addr += 0x20) {
-        __v7_clean_dcache_mva((void *)addr);
+        L1C_CleanDCacheMVA((void *)addr);
     }
+#if defined(TARGET_RZ_A2XX)
+    R_CACHE_L2CleanAll();
+#endif
 }
 
 void dcache_invalid(void * p_buf, uint32_t size) {
@@ -35,7 +41,10 @@ void dcache_invalid(void * p_buf, uint32_t size) {
 
     /* Data cache invalid */
     for (addr = start_addr; addr < end_addr; addr += 0x20) {
-        __v7_inv_dcache_mva((void *)addr);
+        L1C_InvalidateDCacheMVA((void *)addr);
     }
+#if defined(TARGET_RZ_A2XX)
+    R_CACHE_L2InvalidAll();
+#endif
 }
 
