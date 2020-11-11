@@ -28,6 +28,8 @@
 *          - Modified NCGVG_Init() and NCGVG_DeInit().
 *          2014.12.22
 *          - Applied to OSPL and RGA.
+*          2020.11.11
+*          - Removed redundant processing.
 *
 *******************************************************************************/
 
@@ -72,7 +74,7 @@
 /*=============================================================================
  *  Private global variables and functions
  */
-
+static volatile uint32_t g_initialized = 0;
 
 /*=============================================================================
  *  Global Function
@@ -96,7 +98,7 @@ NCGVG_Init (
     NCG_DEBUG_PRINT_STRING( "[LOG] NCGVG_Init" );
 
     reg_value = CPG.STBCR10;
-    if ( CPG.STBCR10 & CPG_STBCR10_MSTP100 ) {
+    {
         /* Standby control register 10 (STBCR10) : 0 : R-GPVG enable */
         CPG.STBCR10 &= ~CPG_STBCR10_MSTP100;
         /* dummy read */
@@ -117,6 +119,7 @@ NCGVG_Init (
             while ( (CPG.STBACK2 & CPG_STBACK2_STBAK20) != 0  ) ;
         }
     }
+    g_initialized = 1;
 
     NCG_UNREFERENCED_PARAMETER( reg_value );  /* Avoid warning of "unused-but-set-variable" of GCC_ARM */
 
@@ -140,7 +143,7 @@ NCGVG_DeInit (
 
     NCG_DEBUG_PRINT_STRING( "[LOG] NCGVG_DeInit" );
 
-    if ( (CPG.STBCR10 & CPG_STBCR10_MSTP100) != CPG_STBCR10_MSTP100 ) {
+    if ( g_initialized ) {
         CPG.STBREQ2 |= CPG_STBREQ2_STBRQ20;
         /* dummy read */
         reg_value = CPG.STBREQ2;
@@ -151,6 +154,7 @@ NCGVG_DeInit (
         /* dummy read */
         reg_value = CPG.STBCR10;
     }
+    g_initialized = 0;
 
     NCG_UNREFERENCED_PARAMETER( reg_value );  /* Avoid warning of "unused-but-set-variable" of GCC_ARM */
 
