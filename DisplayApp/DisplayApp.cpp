@@ -24,7 +24,7 @@ void DisplayApp::display_app_process() {
     PcApp.connect();
 
     while (!PcApp.configured()) {
-        ThisThread::sleep_for(100);
+        ThisThread::sleep_for(100ms);
     }
 
     while (1) {
@@ -96,7 +96,7 @@ void DisplayApp::display_app_process() {
                 pos_seq = POS_SEQ_INIT;
             }
         } else {
-            ThisThread::sleep_for(10);
+            ThisThread::sleep_for(10ms);
         }
     }
 }

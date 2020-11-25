@@ -646,7 +646,7 @@ int32_t sd_unmount(int32_t sd_port)
 int32_t _sd_card_get_status(st_sdhndl_t *p_hndl)
 {
     int32_t  ret;
-    int32_t  i;
+    uint32_t i;
     uint8_t  *p_rw_buff;
 
     /* Cast to an appropriate type */

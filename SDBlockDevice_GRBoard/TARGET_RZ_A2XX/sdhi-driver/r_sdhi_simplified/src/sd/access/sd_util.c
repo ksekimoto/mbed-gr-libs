@@ -1793,13 +1793,13 @@ static int32_t _sd_set_tmpwp_error(st_sdhndl_t *p_hndl)
  *****************************************************************************/
 static uint8_t _sd_calc_crc(uint8_t *data, int32_t len)
 {
-    int32_t i;
-    int32_t j;
-    int32_t k;
-    uint8_t p_crc[7];   /* previous crc value */
-    uint8_t t_crc[7];   /* tentative crc value */
-    uint8_t m_data;     /* input bit mask data */
-    uint8_t crc7 = 0;   /* calculated crc7 */
+    uint32_t i;
+    uint32_t j;
+    uint32_t k;
+    uint8_t  p_crc[7];   /* previous crc value */
+    uint8_t  t_crc[7];   /* tentative crc value */
+    uint8_t  m_data;     /* input bit mask data */
+    uint8_t  crc7 = 0;   /* calculated crc7 */
 
     for (i = 0; i < (sizeof(p_crc)); i++)
     {

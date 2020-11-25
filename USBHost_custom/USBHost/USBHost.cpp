@@ -70,11 +70,9 @@ void USBHost::usb_process() {
 #endif
 
     while(1) {
-        osEvent evt = mail_usb_event.get();
+        message_t * usb_msg = mail_usb_event.try_get_for(rtos::Kernel::wait_for_u32_forever);
 
-        if (evt.status == osEventMail) {
-
-            message_t * usb_msg = (message_t*)evt.value.p;
+        if (usb_msg) {
 
             switch (usb_msg->event_id) {
 
@@ -153,7 +151,7 @@ void USBHost::usb_process() {
                               break;
                           }
 
-                          ThisThread::sleep_for(100);
+                          ThisThread::sleep_for(100ms);
                       }
 
                       USB_INFO("New device connected: %p [hub: %d - port: %d]", &devices[i], usb_msg->hub, usb_msg->port);
@@ -341,14 +339,16 @@ void USBHost::transferCompleted(volatile uint32_t addr)
 
             if (ep->getType() != CONTROL_ENDPOINT) {
                 // callback on the processed td will be called from the usb_thread (not in ISR)
-                message_t * usb_msg = mail_usb_event.alloc();
-                usb_msg->event_id = TD_PROCESSED_EVENT;
-                usb_msg->td_addr = (void *)td;
-                usb_msg->td_state = state;
-                mail_usb_event.put(usb_msg);
+                message_t * usb_msg = mail_usb_event.try_alloc();
+                if(usb_msg) {
+                    usb_msg->event_id = TD_PROCESSED_EVENT;
+                    usb_msg->td_addr = (void *)td;
+                    usb_msg->td_state = state;
+                    mail_usb_event.put(usb_msg);
+                }
             }
             ep->setState(state);
-            ep->ep_queue.put((uint8_t*)1);
+            ep->ep_queue.try_put((uint8_t*)1);
         }
     }
 }
@@ -376,13 +376,15 @@ USBHost * USBHost::getHostInst()
             return;
     }
 
-    message_t * usb_msg = mail_usb_event.alloc();
-    usb_msg->event_id = DEVICE_CONNECTED_EVENT;
-    usb_msg->hub = hub;
-    usb_msg->port = port;
-    usb_msg->lowSpeed = lowSpeed;
-    usb_msg->hub_parent = hub_parent;
-    mail_usb_event.put(usb_msg);
+    message_t * usb_msg = mail_usb_event.try_alloc();
+    if(usb_msg) {
+        usb_msg->event_id = DEVICE_CONNECTED_EVENT;
+        usb_msg->hub = hub;
+        usb_msg->port = port;
+        usb_msg->lowSpeed = lowSpeed;
+        usb_msg->hub_parent = hub_parent;
+        mail_usb_event.put(usb_msg);
+    }
 }
 
 /*
@@ -400,12 +402,14 @@ USBHost * USBHost::getHostInst()
         return;
     }
 
-    message_t * usb_msg = mail_usb_event.alloc();
-    usb_msg->event_id = DEVICE_DISCONNECTED_EVENT;
-    usb_msg->hub = hub;
-    usb_msg->port = port;
-    usb_msg->hub_parent = hub_parent;
-    mail_usb_event.put(usb_msg);
+    message_t * usb_msg = mail_usb_event.try_alloc();
+    if(usb_msg) {
+        usb_msg->event_id = DEVICE_DISCONNECTED_EVENT;
+        usb_msg->hub = hub;
+        usb_msg->port = port;
+        usb_msg->hub_parent = hub_parent;
+        mail_usb_event.put(usb_msg);
+    }
 }
 
 void USBHost::freeDevice(USBDeviceConnected * dev)
@@ -561,7 +565,7 @@ USB_TYPE USBHost::resetDevice(USBDeviceConnected * dev)
     int index = findDevice(dev);
     if (index != -1) {
         USB_DBG("Resetting hub %d, port %d\n", dev->getHub(), dev->getPort());
-        ThisThread::sleep_for(100);
+        ThisThread::sleep_for(100ms);
         if (dev->getHub() == 0) {
             resetRootHub();
         }
@@ -570,7 +574,7 @@ USB_TYPE USBHost::resetDevice(USBDeviceConnected * dev)
             dev->getHubParent()->portReset(dev->getPort());
         }
 #endif
-        ThisThread::sleep_for(100);
+        ThisThread::sleep_for(100ms);
         deviceReset[index] = true;
         return USB_TYPE_OK;
     }
@@ -929,7 +933,7 @@ USB_TYPE USBHost::enumerate(USBDeviceConnected * dev, IUSBEnumerator* pEnumerato
     } while(0);
 
     // Some devices may require this delay
-    ThisThread::sleep_for(100);
+    ThisThread::sleep_for(100ms);
 
     return USB_TYPE_OK;
 }
@@ -1072,7 +1076,8 @@ USB_TYPE USBHost::generalTransfer(USBDeviceConnected * dev, USBEndpoint * ep, ui
 
     if ((blocking)&& (res == USB_TYPE_PROCESSING)) {
 
-        ep->ep_queue.get();
+        uint8_t* pdata;
+        ep->ep_queue.try_get_for(rtos::Kernel::wait_for_u32_forever,&pdata);
         res = ep->getState();
 
         USB_DBG_TRANSFER("%s TRANSFER res: %s on ep: %p\r\n", type_str, ep->getStateString(), ep);
@@ -1105,6 +1110,7 @@ USB_TYPE USBHost::controlTransfer(USBDeviceConnected * dev, uint8_t requestType,
     int length_transfer = len;
     USB_TYPE res;
     uint32_t token;
+    uint8_t* pdata;
 
     control->setSpeed(dev->getSpeed());
     control->setSize(dev->getSizeControlEndpoint());
@@ -1127,7 +1133,7 @@ USB_TYPE USBHost::controlTransfer(USBDeviceConnected * dev, uint8_t requestType,
     control->setNextToken(TD_SETUP);
     res = addTransfer(control, (uint8_t*)setupPacket, 8);
 
-    if (res == USB_TYPE_PROCESSING) control->ep_queue.get();
+    if (res == USB_TYPE_PROCESSING) control->ep_queue.try_get_for(rtos::Kernel::wait_for_u32_forever,&pdata);
     res = control->getState();
 
     USB_DBG_TRANSFER("CONTROL setup stage %s", control->getStateString());
@@ -1141,7 +1147,7 @@ USB_TYPE USBHost::controlTransfer(USBDeviceConnected * dev, uint8_t requestType,
         control->setNextToken(token);
         res = addTransfer(control, (uint8_t *)buf, length_transfer);
 
-        if (res == USB_TYPE_PROCESSING) control->ep_queue.get();
+        if (res == USB_TYPE_PROCESSING) control->ep_queue.try_get_for(rtos::Kernel::wait_for_u32_forever,&pdata);
         res = control->getState();
 
 #if DEBUG_TRANSFER
@@ -1168,7 +1174,7 @@ USB_TYPE USBHost::controlTransfer(USBDeviceConnected * dev, uint8_t requestType,
     control->setNextToken(token);
     res = addTransfer(control, NULL, 0);
 
-    if (res == USB_TYPE_PROCESSING) control->ep_queue.get();
+    if (res == USB_TYPE_PROCESSING) control->ep_queue.try_get_for(rtos::Kernel::wait_for_u32_forever,&pdata);
     res = control->getState();
 
     USB_DBG_TRANSFER("CONTROL ack stage %s", control->getStateString());

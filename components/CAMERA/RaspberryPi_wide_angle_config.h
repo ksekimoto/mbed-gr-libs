@@ -42,7 +42,7 @@ public:
         DigitalIn  cam_gpio1(P6_7);
 #endif
         cam_gpio0 = 1;
-        ThisThread::sleep_for(10);
+        ThisThread::sleep_for(10ms);
 
         mI2c_.frequency(150000);
 
@@ -53,7 +53,7 @@ public:
             }
         }
 
-        ThisThread::sleep_for(1);
+        ThisThread::sleep_for(1ms);
 
         for (uint32_t i = 0; i < (sizeof(RaspberryPi_InitRegTable_2) / 3) ; i++) {
             ret = mI2c_.write(0x20, RaspberryPi_InitRegTable_2[i], 3);

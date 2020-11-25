@@ -482,7 +482,7 @@ drv_graphics_error_t DRV_Graphics_Init( drv_lcd_config_t * drv_lcd_config )
         LvdsUsed = LVDS_IF_NOT_USE;
         pll_panel_clksel   = VDC_PANEL_ICKSEL_LVDS;
 
-        for (uint32_t i = 0; i < sizeof(dcdr_tbl); i++) {
+        for (uint32_t i = 0; i < sizeof(dcdr_tbl)/sizeof(const int); i++) {
             diff_freq = fabs(OutputClock - (InputClock / dcdr_tbl[i]));
             if (diff_freq < non_pll_diff_freq) {
                 pll_dcdr = dcdr_tbl[i];

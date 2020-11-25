@@ -148,7 +148,7 @@ static const DisplayBase::lcd_config_t * lcd_port_init(DisplayBase& Display) {
     DigitalOut lcd_blon(P8_1);
     lcd_pwon = 0;
     lcd_blon = 0;
-    ThisThread::sleep_for(100);
+    ThisThread::sleep_for(100ms);
     lcd_pwon = 1;
     lcd_blon = 1;
 #elif (MBED_CONF_APP_LCD_TYPE == RSK_TFT)
@@ -157,7 +157,7 @@ static const DisplayBase::lcd_config_t * lcd_port_init(DisplayBase& Display) {
     DigitalOut lcd_pwon(LCD_PWON_PIN);
     lcd_pwon = 0;
     lcd_cntrst.period_us(500);
-    ThisThread::sleep_for(100);
+    ThisThread::sleep_for(100ms);
     lcd_pwon = 1;
 #endif
 
@@ -194,15 +194,15 @@ static DisplayBase::graphics_error_t camera_init(DisplayBase& Display, uint16_t 
    #if MBED_CONF_APP_SHIELD_TYPE == SHIELD_AUDIO_CAMERA
     DigitalOut pwdn(P3_12);
     pwdn = 0;
-    ThisThread::sleep_for(1 + 1);
+    ThisThread::sleep_for(1ms + 1ms);
    #elif MBED_CONF_APP_SHIELD_TYPE == SHIELD_WIRELESS_CAMERA
     DigitalOut pwdn(P3_15);
     DigitalOut rstb(P3_14);
     pwdn = 0;
     rstb = 0;
-    ThisThread::sleep_for(10 + 1);
+    ThisThread::sleep_for(10ms + 1ms);
     rstb = 1;
-    ThisThread::sleep_for(1 + 1);
+    ThisThread::sleep_for(1ms + 1ms);
    #endif
   #elif defined(TARGET_GR_LYCHEE)
     PinName cmos_camera_pin[11] = {
@@ -218,9 +218,9 @@ static DisplayBase::graphics_error_t camera_init(DisplayBase& Display, uint16_t 
 
     pwdn = 0;
     rstb = 0;
-    ThisThread::sleep_for(10 + 1);
+    ThisThread::sleep_for(10ms + 1ms);
     rstb = 1;
-    ThisThread::sleep_for(1 + 1);
+    ThisThread::sleep_for(1ms + 1ms);
   #elif defined(TARGET_GR_MANGO)
     PinName cmos_camera_pin[11] = {
         /* data pin */
@@ -235,9 +235,9 @@ static DisplayBase::graphics_error_t camera_init(DisplayBase& Display, uint16_t 
 
     pwdn = 0;
     rstb = 0;
-    ThisThread::sleep_for(10 + 1);
+    ThisThread::sleep_for(10ms + 1ms);
     rstb = 1;
-    ThisThread::sleep_for(1 + 1);
+    ThisThread::sleep_for(1ms + 1ms);
   #elif defined(TARGET_RZ_A2XX)
     PinName cmos_camera_pin[11] = {
         /* data pin */
@@ -249,7 +249,7 @@ static DisplayBase::graphics_error_t camera_init(DisplayBase& Display, uint16_t 
     };
     DigitalOut camera_stby(PE_0);
     camera_stby = 0;
-    ThisThread::sleep_for(1 + 1);
+    ThisThread::sleep_for(1ms + 1ms);
   #endif
 
     /* camera input port setting */

@@ -379,7 +379,7 @@ int32_t R_DK2_Load(const void *const pconfig, const uint8_t top_tiles, const uin
     uint8_t loaded_id[R_DK2_TILE_NUM];
     int32_t loaded_id_index;
 #if(1) /* for mbed */
-    osStatus sem_result;
+    osStatus sem_result = osStatusReserved;
     uint32_t sem_timeout = MUTEX_WAIT;
 #else
     bool mutex_result = false;
@@ -650,7 +650,7 @@ int32_t R_DK2_Unload(const uint8_t id, uint8_t *const paid)
     int32_t result = R_DK2_SUCCESS;
     int32_t tile_index;
 #if(1) /* for mbed */
-    osStatus sem_result;
+    osStatus sem_result = osStatusReserved;
     uint32_t sem_timeout = MUTEX_WAIT;
 #else
     bool mutex_result = false;
@@ -856,7 +856,7 @@ int32_t R_DK2_Activate(const uint8_t id, const uint32_t freq)
     int32_t tile_index;
     uint8_t div;
 #if(1) /* for mbed */
-    osStatus sem_result;
+    osStatus sem_result = osStatusReserved;
     uint32_t sem_timeout = MUTEX_WAIT;
 #else
     bool mutex_result = false;

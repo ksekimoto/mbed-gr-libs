@@ -55,14 +55,16 @@ bool SoundlessSpeaker::frequency(int hz) {
 
 int SoundlessSpeaker::write(void * const p_data, uint32_t data_size, const rbsp_data_conf_t * const p_data_conf) {
     int wk_next_time = _next_time;
-    int wk_time = _t.read_ms();
+    int wk_time = chrono::duration_cast<chrono::milliseconds>(_t.elapsed_time()).count();
     int wk_over_time;
 
     if (wk_time < wk_next_time) {
-        ThisThread::sleep_for(wk_next_time - wk_time);
+        std::chrono::milliseconds wk_ms(wk_next_time - wk_time);
+        
+        ThisThread::sleep_for(wk_ms);
     }
     _next_time = (data_size * 1000) / _byte_per_sec;
-    wk_over_time = _t.read_ms() - wk_next_time;
+    wk_over_time = chrono::duration_cast<chrono::milliseconds>(_t.elapsed_time()).count() - wk_next_time;
     if (wk_over_time > 0) {
         if (wk_over_time > _next_time) {
             _next_time = 0;
@@ -70,6 +72,7 @@ int SoundlessSpeaker::write(void * const p_data, uint32_t data_size, const rbsp_
             _next_time -= wk_over_time;
         }
     }
+
     _t.reset();
     _t.start();
 

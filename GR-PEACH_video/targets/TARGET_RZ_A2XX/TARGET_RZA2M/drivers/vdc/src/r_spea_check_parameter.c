@@ -79,7 +79,7 @@ spea_error_t SPEA_SetWindowCheckPrm (
         goto END;
     }
 
-    if( ( WINDOW_NUM <= window_id) || ( WINDOW_00 > window_id) )
+    if( WINDOW_NUM <= window_id)
     {
         spea_error = SPEA_ERR_PARAM;
         goto END;

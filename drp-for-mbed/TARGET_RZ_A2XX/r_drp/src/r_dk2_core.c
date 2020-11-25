@@ -1828,6 +1828,7 @@ static void dk2_get_int(uint32_t *pdscc, uint32_t *pidif, uint32_t *podif)
     odif_int = (DRP_ODIF_INT & 0x3F); /* get   ODIF INT */
     DRP_ODIF_INT = odif_int;          /* clear ODIF INT */
     dummy = DRP_ODIF_INT;             /* dummy read */
+    (void)dummy;
 
     if (0 != podif)
     {

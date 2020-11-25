@@ -872,7 +872,9 @@ enum { E_EXIT_TEST          = E_CATEGORY_COMMON | 0x1E }; /* 30 */
 /* ->SEC M1.1.1 */
 #define  R_STATIC_ASSERT( ConstantExpression, StringLiteral ) \
 	do { typedef char_t R_JOIN_SYMBOL_FOR_ASSERT( assertion_failed_t_, __LINE__ ) \
-		[(ConstantExpression) ? 1 : -1]; } while(0)
+		[(ConstantExpression) ? 1 : -1]; \
+		R_JOIN_SYMBOL_FOR_ASSERT( assertion_failed_t_, __LINE__ ) R_JOIN_SYMBOL_FOR_ASSERT( dummy, __LINE__ );\
+		(void)R_JOIN_SYMBOL_FOR_ASSERT( dummy, __LINE__ );} while(0)
 /* If "ConstantExpression" is false, illegal array size error will be raised. */
 /* <-SEC M1.1.1 */
 

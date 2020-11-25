@@ -179,7 +179,7 @@ int32_t _sd_write_sect(st_sdhndl_t *p_hndl, uint8_t *buff, uint32_t psn, int32_t
     int32_t  mode = SD_MODE_SW;
     uint8_t  wb[4];
     uint32_t writeblock;
-    uint64_t info1_back;
+    uint64_t info1_back = 0;
     uint64_t opt_back;
 
     /* access area check */
@@ -314,7 +314,7 @@ int32_t _sd_write_sect(st_sdhndl_t *p_hndl, uint8_t *buff, uint32_t psn, int32_t
             /* software data transfer */
             trans_ret = _sd_software_trans(p_hndl, buff, cnt, SD_TRANS_WRITE);
         }
-        else    /* ==== DMA ==== */
+        else if (SD_MODE_DMA == mode)   /* ==== DMA ==== */
         {
             /* disable card ins&rem interrupt for FIFO */
             info1_back = (uint64_t)(p_hndl->int_info1_mask & SD_INFO1_MASK_DET_CD);
@@ -386,7 +386,7 @@ int32_t _sd_write_sect(st_sdhndl_t *p_hndl, uint8_t *buff, uint32_t psn, int32_t
                             /* Cast to an appropriate type */
                             ((uint32_t)wb[2] << 8)  | (uint32_t)wb[3];
 
-                if (cnt != writeblock)  /* no write complete block */
+                if ((uint32_t)cnt != writeblock)  /* no write complete block */
                 {
                     _sd_set_err(p_hndl, SD_ERR);
                     return _sd_write_sect_error(p_hndl, mode);
@@ -600,8 +600,8 @@ static int32_t _sd_single_write(st_sdhndl_t *p_hndl, uint8_t *buff, uint32_t psn
                                 int32_t mode)
 {
     int32_t  ret;
-    int32_t  trans_ret;
-    uint64_t info1_back;
+    int32_t  trans_ret = 0;
+    uint64_t info1_back = 0;
 
     /* ---- enable RespEnd and ILA ---- */
     _sd_set_int_mask(p_hndl, SD_INFO1_MASK_RESP, SD_INFO2_MASK_ILA);
@@ -623,7 +623,7 @@ static int32_t _sd_single_write(st_sdhndl_t *p_hndl, uint8_t *buff, uint32_t psn
         /* software data transfer */
         trans_ret = _sd_software_trans(p_hndl, buff, 1, SD_TRANS_WRITE);
     }
-    else    /* ==== DMA ==== */
+    else if (SD_MODE_DMA == mode)   /* ==== DMA ==== */
     {
         /* disable card ins&rem interrupt for FIFO */
         info1_back = (uint64_t)(p_hndl->int_info1_mask & SD_INFO1_MASK_DET_CD);

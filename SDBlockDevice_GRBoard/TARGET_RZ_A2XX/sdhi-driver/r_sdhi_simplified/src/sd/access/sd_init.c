@@ -348,7 +348,7 @@ int32_t sd_finalize(int32_t sd_port)
  *****************************************************************************/
 int32_t _sd_init_hndl(st_sdhndl_t *p_hndl, uint32_t mode, uint32_t voltage)
 {
-    int32_t i;
+    uint32_t i;
 
     p_hndl->media_type = SD_MEDIA_UNKNOWN;
     p_hndl->write_protect = 0;
