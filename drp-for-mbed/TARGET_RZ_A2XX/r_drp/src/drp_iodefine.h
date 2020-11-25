@@ -1,74 +1,68 @@
-/*******************************************************************************
+/**********************************************************************************************************************
 * DISCLAIMER
-* This software is supplied by Renesas Electronics Corporation and is only
-* intended for use with Renesas products. No other uses are authorized. This
-* software is owned by Renesas Electronics Corporation and is protected under
-* all applicable laws, including copyright laws.
+* This software is supplied by Renesas Electronics Corporation and is only intended for use with Renesas products. No
+* other uses are authorized. This software is owned by Renesas Electronics Corporation and is protected under all
+* applicable laws, including copyright laws.
 * THIS SOFTWARE IS PROVIDED "AS IS" AND RENESAS MAKES NO WARRANTIES REGARDING
-* THIS SOFTWARE, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING BUT NOT
-* LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE
-* AND NON-INFRINGEMENT. ALL SUCH WARRANTIES ARE EXPRESSLY DISCLAIMED.
-* TO THE MAXIMUM EXTENT PERMITTED NOT PROHIBITED BY LAW, NEITHER RENESAS
-* ELECTRONICS CORPORATION NOR ANY OF ITS AFFILIATED COMPANIES SHALL BE LIABLE
-* FOR ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES FOR
-* ANY REASON RELATED TO THIS SOFTWARE, EVEN IF RENESAS OR ITS AFFILIATES HAVE
-* BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
-* Renesas reserves the right, without notice, to make changes to this software
-* and to discontinue the availability of this software. By using this software,
-* you agree to the additional terms and conditions found by accessing the
+* THIS SOFTWARE, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. ALL SUCH WARRANTIES ARE EXPRESSLY DISCLAIMED. TO THE MAXIMUM
+* EXTENT PERMITTED NOT PROHIBITED BY LAW, NEITHER RENESAS ELECTRONICS CORPORATION NOR ANY OF ITS AFFILIATED COMPANIES
+* SHALL BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES FOR ANY REASON RELATED TO
+* THIS SOFTWARE, EVEN IF RENESAS OR ITS AFFILIATES HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+* Renesas reserves the right, without notice, to make changes to this software and to discontinue the availability of
+* this software. By using this software, you agree to the additional terms and conditions found by accessing the
 * following link:
 * http://www.renesas.com/disclaimer
-*
-* Copyright (C) 2018 Renesas Electronics Corporation. All rights reserved.
-*******************************************************************************/
-/*******************************************************************************
+* Copyright (C) 2019 Renesas Electronics Corporation. All rights reserved.
+**********************************************************************************************************************/
+/**********************************************************************************************************************
 * System Name  : DRP Driver
 * File Name    : drp_iodefine.h
-* Device       : RZ
+* Device       : RZ/A2M
 * Abstract     : Control software of DRP.
 * Tool-Chain   : Renesas e2 studio
-* OS           : Not use
-* H/W Platform : Renesas Starter Kit
+* OS           : None
+* H/W Platform : RZ/A2M Evaluation Board
 * Description  : IO define of DRP Driver.
 * Limitation   : None
-*******************************************************************************/
-/*******************************************************************************
+**********************************************************************************************************************/
+/**********************************************************************************************************************
 * History      : History is managed by Revision Control System.
-*******************************************************************************/
+**********************************************************************************************************************/
 
 #ifndef DRP_IODEFINE_H
 #define DRP_IODEFINE_H
 
-/*******************************************************************************
+/**********************************************************************************************************************
 Includes <System Includes> , "Project Includes"
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 Macro definitions
-*******************************************************************************/
+**********************************************************************************************************************/
 /* CLKC */
-#define DRP_regStandby (*(volatile unsigned long *)0xEAFD4018)
-#define DRP_regClkRst0 (*(volatile unsigned long *)0xEAFD4020)
-#define DRP_regClkRst1 (*(volatile unsigned long *)0xEAFD4028)
-#define DRP_regClkRst2 (*(volatile unsigned long *)0xEAFD4030)
-#define DRP_regClkRst3 (*(volatile unsigned long *)0xEAFD4038)
-#define DRP_regClkRst4 (*(volatile unsigned long *)0xEAFD4040)
-#define DRP_regClkRst5 (*(volatile unsigned long *)0xEAFD4048)
-#define DRP_regClkRst6 (*(volatile unsigned long *)0xEAFD4050)
-#define DRP_regClkRst7 (*(volatile unsigned long *)0xEAFD4058)
-#define DRP_regSftRst0 (*(volatile unsigned long *)0xEAFD4060)
-#define DRP_regSftRst1 (*(volatile unsigned long *)0xEAFD4068)
-#define DRP_regSftRst2 (*(volatile unsigned long *)0xEAFD4070)
-#define DRP_regSftRst3 (*(volatile unsigned long *)0xEAFD4078)
-#define DRP_regSftRst4 (*(volatile unsigned long *)0xEAFD4080)
-#define DRP_regSftRst5 (*(volatile unsigned long *)0xEAFD4088)
-#define DRP_regSftRst6 (*(volatile unsigned long *)0xEAFD4090)
-#define DRP_regSftRst7 (*(volatile unsigned long *)0xEAFD4098)
+#define DRP_REGSTANBY  (*(volatile unsigned long *)0xEAFD4018)
+#define DRP_REGCLKRST0 (*(volatile unsigned long *)0xEAFD4020)
+#define DRP_REGCLKRST1 (*(volatile unsigned long *)0xEAFD4028)
+#define DRP_REGCLKRST2 (*(volatile unsigned long *)0xEAFD4030)
+#define DRP_REGCLKRST3 (*(volatile unsigned long *)0xEAFD4038)
+#define DRP_REGCLKRST4 (*(volatile unsigned long *)0xEAFD4040)
+#define DRP_REGCLKRST5 (*(volatile unsigned long *)0xEAFD4048)
+#define DRP_REGCLKRST6 (*(volatile unsigned long *)0xEAFD4050)
+#define DRP_REGCLKRST7 (*(volatile unsigned long *)0xEAFD4058)
+#define DRP_REGSFTRST0 (*(volatile unsigned long *)0xEAFD4060)
+#define DRP_REGSFTRST1 (*(volatile unsigned long *)0xEAFD4068)
+#define DRP_REGSFTRST2 (*(volatile unsigned long *)0xEAFD4070)
+#define DRP_REGSFTRST3 (*(volatile unsigned long *)0xEAFD4078)
+#define DRP_REGSFTRST4 (*(volatile unsigned long *)0xEAFD4080)
+#define DRP_REGSFTRST5 (*(volatile unsigned long *)0xEAFD4088)
+#define DRP_REGSFTRST6 (*(volatile unsigned long *)0xEAFD4090)
+#define DRP_REGSFTRST7 (*(volatile unsigned long *)0xEAFD4098)
 #define DRP_StandbyOut (*(volatile unsigned long *)0xEAFD40A0)
-#define DRP_SleepOut (*(volatile unsigned long *)0xEAFD40A8)
-#define DRP_regIDREG1 (*(volatile unsigned long *)0xEAFD40B0)
-#define DRP_regIDREG5 (*(volatile unsigned long *)0xEAFD40D0)
-#define DRP_CHIPID32 (*(volatile unsigned long *)0xEAFD40D8)
+#define DRP_SleepOut   (*(volatile unsigned long *)0xEAFD40A8)
+#define DRP_REGIDREG1  (*(volatile unsigned long *)0xEAFD40B0)
+#define DRP_REGIDREG5  (*(volatile unsigned long *)0xEAFD40D0)
+#define DRP_CHIPID32   (*(volatile unsigned long *)0xEAFD40D8)
 #define DRP_regStandbyWait (*(volatile unsigned long *)0xEAFD40F0)
 #define DRP_regStandbyWaitClr (*(volatile unsigned long *)0xEAFD40F8)
 /* COMCFGC COMREGC */
@@ -1927,12 +1921,12 @@ Macro definitions
 #define DRPK_TILE0_ADDR (DRPK_BASE_ADDR + 0x00000000)
 #define REG_CFGMREADEN  (0x00118040)
 
-/*******************************************************************************
+/**********************************************************************************************************************
 Typedef definitions
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 Public Functions
-*******************************************************************************/
+**********************************************************************************************************************/
 
 #endif /* DRP_IODEFINE_H */
