@@ -11,7 +11,7 @@ GR-PEACH、GR-LYCHEE、RZ/A2Mボード用のライブラリ群です。ライブ
 * DisplayApp (USB接続でPCディスプレイに画像表示)
 * ASCIIフォント
 * SDカードの通信速度
-* DRP (RZ/A2Mのみ)
+* DRP (GR-MANGOのみ)
 
 ## カメラとLCDの接続
 ``EasyAttach_CameraAndLCD``を使うことで、カメラとLCDの接続を簡単に行うことができます。  

@@ -13,7 +13,7 @@ GR-PEACH, GR-LYCHEE and RZ/A2M board library group. The library includes the fol
 * DisplayApp (Image display on PC display with USB connection)
 * ASCII font
 * Communication speed of SD card
-* DRP (RZ/A2M only)
+* DRP (GR-MANGO only)
 
 
 ## Connect camera and LCD
