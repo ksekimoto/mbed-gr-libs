@@ -193,6 +193,6 @@ GR-PEACH、GR-LYCHEEは SPIバスを使ってSDカードにアクセスします
 接続については``SdUsbConnectクラス``を参照ください。  
 
 
-## DRP (RZ/A2Mのみ)
+## DRP (GR-MANGOのみ)
 DRP(Dynamically Reconfigurable Processor)はソフトウェアの柔軟さとハードウェアの高速性を兼ね備えたプログラマブルハードウェアです。処理を定義するファームウェアの書き換えが瞬間に行えます。  
 詳しくは ``drp-for-mbed/TARGET_RZ_A2XX/r_drp/doc`` を参照ください。  
