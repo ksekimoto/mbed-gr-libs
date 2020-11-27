@@ -70,7 +70,7 @@ void USBHALHost::init() {
 #if USB_HOST_CH == 0
 #if defined(TARGET_GR_MANGO)
     pin_function(P1_0, 5); // VBUSEN0
-    pin_function(P1_1, 5); // OVRCUR0
+    pin_function(PJ_5, 5); // OVRCUR0
     pin_function(P5_2, 3); // VBUSIN0
 #else
     pin_function(PC_6, 1); // VBUSEN0
