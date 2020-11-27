@@ -1,5 +1,5 @@
 # **Mbed GRボード用ライブラリ**  mbed-gr-libs
-GR-PEACH、GR-LYCHEE、RZ/A2Mボード用のライブラリ群です。ライブラリには以下の機能が含まれます。  
+GR-PEACH、GR-LYCHEE、GR-MANGOボード用のライブラリ群です。ライブラリには以下の機能が含まれます。  
 * カメラとLCDの接続
 * USBメモリとSDカードの接続
 * キャッシュ制御
@@ -134,7 +134,7 @@ GR-Board内のJPEG画像をPC上に表示するためのライブラリです。
 
 ![](docs/img/usb0_and_button.jpg)  
 
-RZ/A2Mの場合は``USBチャネル1``に接続してください。  
+GR-MANGOの場合は``USBチャネル1``に接続してください。  
 Windows10以外ご使用の場合、ドライバのインストールが必要となります。下記サイトのからドライバーをダウンロードできます。  
 
 https://os.mbed.com/handbook/USBSerial
@@ -188,7 +188,7 @@ int main() {
 ```
 
 ## SDカードの通信速度
-RZ/A2MはSDスピードクラスで通信を行います。RZ/A2MでHSスピードクラス、または、UHSスピードクラスが必要な方は、[こちら]((https://www.renesas.com/jp/ja/support/contact.html)よりお問合せください。  
+GR-MANGOはSDスピードクラスで通信を行います。GR-MANGOでHSスピードクラス、または、UHSスピードクラスが必要な方は、[こちら]((https://www.renesas.com/jp/ja/support/contact.html)よりお問合せください。  
 GR-PEACH、GR-LYCHEEは SPIバスを使ってSDカードにアクセスします。  
 接続については``SdUsbConnectクラス``を参照ください。  
 
