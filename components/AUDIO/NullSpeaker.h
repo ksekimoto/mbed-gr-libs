@@ -43,13 +43,13 @@ public:
     }
 
     virtual int write(void * const p_data, uint32_t data_size, const rbsp_data_conf_t * const p_data_conf = NULL) {
-        if (p_data_conf != NULL) {
+        if (p_data_conf == NULL) {
             return data_size;
         }
         if (p_data_conf->p_notify_func != NULL) {
             p_data_conf->p_notify_func(p_data, data_size, p_data_conf->p_app_data);
         }
-        return 0;
+        return data_size;
     }
 
     virtual int read(void * const p_data, uint32_t data_size, const rbsp_data_conf_t * const p_data_conf = NULL) {
