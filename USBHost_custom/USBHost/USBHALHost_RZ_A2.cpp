@@ -144,15 +144,17 @@ void USBHALHost::init() {
     USBX0.HCRHPORTSTATUS1.LONG = OR_RH_PORT_CSC;
     USBX0.HCRHPORTSTATUS1.LONG = OR_RH_PORT_PRSC;
 
-    GIC_EnableIRQ(USBHIX_IRQn);
-
     // Check for any connected devices
     if (USBX0.HCRHPORTSTATUS1.LONG & OR_RH_PORT_CCS) {
         //Device connected
         ThisThread::sleep_for(150ms);
         USB_DBG("Device connected (%08x)\n\r", USBX0.HCRHPORTSTATUS1.LONG);
         deviceConnected(0, 1, USBX0.HCRHPORTSTATUS1.LONG & OR_RH_PORT_LSDA);
+        //reset interrupt request
+        USBX0.HCINTERRUPTSTATUS.LONG = USBX0.HCINTERRUPTSTATUS.LONG;
+        USBX0.HCRHPORTSTATUS1.LONG   = OR_RH_PORT_CSC|OR_RH_PORT_PRSC;
     }
+    GIC_EnableIRQ(USBHIX_IRQn);
 }
 
 uint32_t USBHALHost::controlHeadED() {

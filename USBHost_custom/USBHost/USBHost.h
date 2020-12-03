@@ -237,7 +237,11 @@ protected:
 
 private:
     // singleton class -> constructor is private
+#if defined  (__CC_ARM)
     USBHost();
+#else    /* __CC_ARM */
+    USBHost() __attribute__((optimize("-Og")));
+#endif   /* __CC_ARM */
     static USBHost * instHost;
     uint16_t  lenReportDescr;
 

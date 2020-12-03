@@ -114,7 +114,7 @@ private:
     uint8_t buf[sizeof(HubDescriptor)];
 #endif
 
-    int hub_intf;
+    volatile int hub_intf;
     bool hub_device_found;
 
     void setPortFeature(uint32_t feature, uint8_t port);
