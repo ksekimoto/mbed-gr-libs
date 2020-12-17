@@ -27,13 +27,8 @@
 *         : 14.12.2018 1.01     Changed the DMAC soft reset procedure.
 *         : 29.05.2019 1.20     Correspond to internal coding rules
 ******************************************************************************/
-#if(1) // mbed
 #include "cmsis_os.h"
 #include "irq_ctrl.h"
-#else
-#include "r_stb_lld_rza2m.h"
-#include "r_intc_lld_rza2m.h"
-#endif
 #include "r_sd_cfg.h"
 
 #ifndef SD_DEV_DMACDRV_H
@@ -51,22 +46,13 @@ typedef struct
     struct
     {
         bool_t                  stb_pon_init;
-#if(1) // mbed
-#else
-        e_stb_module_t          stb_ch;
-#endif
+        uint32_t                stb_ch;
     } stb;
     struct
     {
-#if(1) // mbed
         IRQn_ID_t               int_id;
         uint32_t                int_priority;
         void                    (* p_func)(void);
-#else
-        e_r_drv_intc_intid_t    int_id;
-        e_r_drv_intc_priority_t int_priority;
-        void                    (* p_func)(uint32_t int_sense);
-#endif
     } intc;
     struct
     {
@@ -76,13 +62,8 @@ typedef struct
 #ifdef SD_CFG_HWINT
     struct
     {
-#if(1) // mbed
         osSemaphoreId_t         sem_sync;
         osSemaphoreId_t         sem_dma;
-#else
-        uint32_t                sem_sync;
-        uint32_t                sem_dma;
-#endif
     } semaphore;
 #endif /* #ifdef SD_CFG_HWINT */
 } st_sdhi_info_dev_ch_t;
