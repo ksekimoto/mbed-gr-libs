@@ -792,6 +792,10 @@ drv_graphics_error_t DRV_Graphics_Stop ( drv_graphics_layer_t layer_id )
         if (error != VDC_OK) {
             drv_error = DRV_GRAPHICS_VDC5_ERR;
         }
+        error = R_VDC_ReleaseDataControl( ch, vdc_layer_id );
+        if (error != VDC_OK) {
+            drv_error = DRV_GRAPHICS_VDC5_ERR;
+        }
     }
     return drv_error;
 }   /* End of function DRV_Graphics_Stop() */
