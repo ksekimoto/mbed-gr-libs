@@ -28,6 +28,7 @@
   #define CAMERA_WIRELESS_CAMERA          0x0083
   #define CAMERA_RASPBERRY_PI             0x2000
   #define CAMERA_RASPBERRY_PI_WIDE_ANGLE  0x2001
+  #define CAMERA_RASPBERRY_PI_832X480     0x2002
 
   // shield-type
   #define SHIELD_AUDIO_CAMERA         1
@@ -82,6 +83,8 @@
     #include "RaspberryPi_config.h"
   #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_RASPBERRY_PI_WIDE_ANGLE
     #include "RaspberryPi_wide_angle_config.h"
+  #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_RASPBERRY_PI_832X480
+    #include "RaspberryPi_832x480_config.h"  
   #endif
 #endif
 

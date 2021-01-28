@@ -278,6 +278,8 @@ static DisplayBase::graphics_error_t camera_init(DisplayBase& Display, uint16_t 
     RaspberryPi_config camera_cfg;
   #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_RASPBERRY_PI_WIDE_ANGLE
     RaspberryPi_wide_angle_config camera_cfg;
+  #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_RASPBERRY_PI_832X480
+    RaspberryPi_832x480_config camera_cfg;
   #else
     #error "No camera chosen. Please add 'config.camera-type.value' to your mbed_app.json (see README.md for more information)."
   #endif

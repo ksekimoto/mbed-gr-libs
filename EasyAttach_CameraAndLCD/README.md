@@ -57,6 +57,7 @@ Add the following to your ``mbed_app.json`` file:
 | CAMERA_WIRELESS_CAMERA        | GR-PEACH Wireless/Camera shield (OV7725) |
 | CAMERA_RASPBERRY_PI           | Raspberry Pi camera                |
 | CAMERA_RASPBERRY_PI_WIDE_ANGLE| Raspberry Pi camera (wide-angle)   |
+| CAMERA_RASPBERRY_PI_832X480   | Raspberry Pi camera (832x480)      |
 
 | lcd-type "value"           | Description                        |
 |:---------------------------|:-----------------------------------|
