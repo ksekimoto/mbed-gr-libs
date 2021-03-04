@@ -18,21 +18,18 @@
  *********************************************************************************************************************/
 /*******************************************************************************
 * System Name  : SDHI Driver
-* File Name    : sd_cd.c
-* Version      : 1.31
+* File Name    : sdio_direct.c
 * Device(s)    : RZ/A2M
 * Tool-Chain   : e2 studio (GCC ARM Embedded)
 * OS           : None
 * H/W Platform : RZ/A2M Evaluation Board
-* Description  :
+* Description  : io direct read and write
 * Operation    :
 * Limitations  : None
 ******************************************************************************/
 /*****************************************************************************
 * History : DD.MM.YYYY Version  Description
-*         : 16.03.2018 1.00     First Release
-*         : 29.05.2019 1.20     Correspond to internal coding rules
-*         : 12.11.2019 1.31     Replaces the register access with iodefine
+*         : 17.09.2019 1.30     Support for SDIO
 ******************************************************************************/
 
 /******************************************************************************
@@ -41,8 +38,6 @@ Includes   <System Includes> , "Project Includes"
 #include "r_typedefs.h"
 #include "r_sdif.h"
 #include "sd.h"
-#include "iodefine.h"
-
 
 #ifdef __CC_ARM
 #pragma arm section code = "CODE_SDHI"
@@ -71,112 +66,20 @@ Exported global variables and functions (to be accessed by other files)
 Private global variables and functions
 ******************************************************************************/
 
-
 /******************************************************************************
- * Function Name: sd_cd_int
- * Description  : set card detect interrupt
- *              : if select SD_CD_INT_ENABLE, detect interrupt is enbled and
- *              : it is possible register callback function
- *              : if select SD_CD_INT_DISABLE, detect interrupt is disabled
- * Arguments    : int32_t sd_port               : channel no (0 or 1)
- *              : int32_t enable                : is enable or disable card detect interrupt?
- *              : int32_t (*callback)(int32_t, int32_t)
- *                                              : interrupt callback function
- * Return Value : SD_OK : end of succeed
- *              : SD_ERR: end of error
- *****************************************************************************/
-int32_t sd_cd_int(int32_t sd_port, int32_t enable, int32_t (*callback)(int32_t, int32_t))
-{
-    uint64_t    info1;
-    st_sdhndl_t *p_hndl;
-    int32_t     layout;
-
-    if ( (0 != sd_port) && (1 != sd_port) )
-    {
-        return SD_ERR;
-    }
-
-    p_hndl = SD_GET_HNDLS(sd_port);
-    if (0 == p_hndl)
-    {
-        return SD_ERR;  /* not initilized */
-    }
-    if ((SD_CD_INT_ENABLE != enable) && (SD_CD_INT_DISABLE != enable))
-    {
-        return SD_ERR;  /* parameter error */
-    }
-
-    /* is change interrupt disable to enable? */
-    if ((p_hndl->int_info1_mask & (SD_INFO1_MASK_DET_DAT3 | SD_INFO1_MASK_DET_CD)) == 0)
-    {
-        sddev_loc_cpu(sd_port);
-
-        /* Cast to an appropriate type */
-        info1 = SDMMC.SD_INFO1.LONGLONG;
-
-        /* Cast to an appropriate type */
-        info1 &= (uint64_t)~SD_INFO1_MASK_DET_DAT3_CD;
-
-        /* Cast to an appropriate type */
-        SDMMC.SD_INFO1.LONGLONG = info1; /* clear insert and remove bits */
-        sddev_unl_cpu(sd_port);
-    }
-
-    layout = sddev_cd_layout(sd_port);
-    if (SD_OK == layout)
-    {
-        if (SD_CD_INT_ENABLE == enable)
-        {
-            /* enable insert and remove interrupts */
-            if (SD_CD_SOCKET == p_hndl->cd_port)  /* CD */
-            {
-                /* Cast to an appropriate type */
-                _sd_set_int_mask(p_hndl, SD_INFO1_MASK_DET_CD, 0);
-            }
-            else    /* DAT3 */
-            {
-                /* Cast to an appropriate type */
-                _sd_set_int_mask(p_hndl, SD_INFO1_MASK_DET_DAT3, 0);
-            }
-        }
-        else    /* case SD_CD_INT_DISABLE */
-        {
-            /* disable insert and remove interrupts */
-            if (SD_CD_SOCKET == p_hndl->cd_port)  /* CD */
-            {
-                /* Cast to an appropriate type */
-                _sd_clear_int_mask(p_hndl, SD_INFO1_MASK_DET_CD, 0);
-            }
-            else    /* DAT3 */
-            {
-                /* Cast to an appropriate type */
-                _sd_clear_int_mask(p_hndl, SD_INFO1_MASK_DET_DAT3, 0);
-            }
-        }
-    }
-
-    /* ---- register callback function ---- */
-    p_hndl->int_cd_callback = callback;
-
-    return SD_OK;
-}
-/******************************************************************************
- End of function sd_cd_int
- *****************************************************************************/
-
-/******************************************************************************
- * Function Name: sd_check_media
- * Description  : check card insertion
- *              : if card is inserted, return SD_OK
- *              : if card is not inserted, return SD_ERR
- *              : if SD handle is not initialized, return SD_ERR
+ * Function Name: sdio_read_direct
+ * Description  : direct read io register from specified address (=adr)
+ *                using CMD52
  * Arguments    : int32_t sd_port : channel no (0 or 1)
- * Return Value : SD_OK : card is inserted
- *              : SD_ERR: card is not inserted
+ *                uint8_t *buff   : data buffer
+ *                uint32_t func   : access function number
+ *                uint32_t adr    : access register address
+ * Return Value : SD_OK : end of succeed
+ *                SD_ERR: end of error
  *****************************************************************************/
-int32_t sd_check_media(int32_t sd_port)
+int32_t sdio_read_direct(int32_t sd_port, uint8_t *buff, uint32_t func, uint32_t adr)
 {
-    st_sdhndl_t  *p_hndl;
+    st_sdhndl_t *p_hndl;
 
     if ( (0 != sd_port) && (1 != sd_port) )
     {
@@ -189,65 +92,167 @@ int32_t sd_check_media(int32_t sd_port)
         return SD_ERR;  /* not initilized */
     }
 
-    return _sd_check_media(p_hndl);
+    p_hndl->error = SD_OK;
+
+    /* ---- check card is mounted ---- */
+    if (SD_MOUNT_UNLOCKED_CARD != p_hndl->mount)
+    {
+        _sd_set_err(p_hndl, SD_ERR);
+        return p_hndl->error; /* not mounted yet */
+    }
+
+    /* ---- is card existed? ---- */
+    if (_sd_check_media(p_hndl) != SD_OK)
+    {
+        _sd_set_err(p_hndl, SD_ERR_NO_CARD);  /* no card */
+        return SD_ERR_NO_CARD;
+    }
+
+    /* ---- supply clock (data-transfer ratio) ---- */
+    if (_sd_set_clock(p_hndl, (int32_t)p_hndl->csd_tran_speed, SD_CLOCK_ENABLE) != SD_OK)
+    {
+        return p_hndl->error;
+    }
+
+    /* ==== direct read and write io register ==== */
+    _sdio_direct(p_hndl, buff, func, adr, 0, 0);
+
+    /* ---- halt clock ---- */
+    _sd_set_clock(p_hndl, 0, SD_CLOCK_DISABLE);
+
+    return p_hndl->error;
 }
 /******************************************************************************
- End of function sd_check_media
+ End of function sdio_read_direct
  *****************************************************************************/
 
 /******************************************************************************
- * Function Name: _sd_check_media
- * Description  : check card insertion
- *              : if card is inserted, return SD_OK
- *              : if card is not inserted, return SD_ERR
- * Arguments    : st_sdhndl_t *p_hndl : SD handle
- * Return Value : SD_OK : card is inserted
- *              : SD_ERR: card is not inserted
+ * Function Name: sdio_write_direct
+ * Description  : direct write io register from specified address (=adr)
+ *                using CMD52
+ * Arguments    : int32_t sd_port   : channel no (0 or 1)
+ *                uint8_t *buff     : data buffer
+ *                uint32_t func     : access function number
+ *                uint32_t adr      : access register address
+ *                uint32_t raw_flag : write mode
+ *                  SD_IO_SIMPLE_WRITE : just write
+ *                  SD_IO_VERIFY_WRITE : read after write
+ * Return Value : SD_OK : end of succeed
+ *                SD_ERR: end of error
  *****************************************************************************/
-int32_t _sd_check_media(st_sdhndl_t *p_hndl)
+int32_t sdio_write_direct(int32_t sd_port, uint8_t *buff, uint32_t func, uint32_t adr,
+                            uint32_t raw_flag)
 {
-    uint16_t reg;
-    int32_t  layout;
+    st_sdhndl_t *p_hndl;
+
+    if ( (0 != sd_port) && (1 != sd_port) )
+    {
+        return SD_ERR;
+    }
+
+    p_hndl = SD_GET_HNDLS(sd_port);
+    if (0 == p_hndl)
+    {
+        return SD_ERR;  /* not initilized */
+    }
+
+    p_hndl->error = SD_OK;
+
+    /* ---- check card is mounted ---- */
+    if (SD_MOUNT_UNLOCKED_CARD != p_hndl->mount)
+    {
+        _sd_set_err(p_hndl, SD_ERR);
+        return p_hndl->error; /* not mounted yet */
+    }
+
+    /* ---- is card existed? ---- */
+    if (_sd_check_media(p_hndl) != SD_OK)
+    {
+        _sd_set_err(p_hndl, SD_ERR_NO_CARD);  /* no card */
+        return SD_ERR_NO_CARD;
+    }
+
+    /* ---- supply clock (data-transfer ratio) ---- */
+    if (_sd_set_clock(p_hndl, (int32_t)p_hndl->csd_tran_speed, SD_CLOCK_ENABLE) != SD_OK)
+    {
+        return p_hndl->error;
+    }
+
+    /* ==== direct read and write io register ==== */
+    _sdio_direct(p_hndl, buff, func, adr, 1, raw_flag);
+
+    /* ---- halt clock ---- */
+    _sd_set_clock(p_hndl, 0, SD_CLOCK_DISABLE);
+
+    return p_hndl->error;
+}
+/******************************************************************************
+ End of function sdio_write_direct
+ *****************************************************************************/
+
+/******************************************************************************
+ * Function Name: _sdio_direct
+ * Description  : direct read or write io register from specified address
+ *                (=adr) using CMD52
+ * Arguments    : st_sdhndl_t *p_hndl      : SD handle
+ *                uint8_t *buff     : data buffer
+ *                uint32_t func     : access function number
+ *                uint32_t adr      : access register address
+ *                uint32_t rw_flag  : read (= 0) or write (= 1)
+ *                uint32_t raw_flag : write mode
+ *                  SD_IO_SIMPLE_WRITE : just write
+ *                  SD_IO_VERIFY_WRITE : read after write
+ * Return Value : SD_OK : end of succeed
+ *                SD_ERR: end of error
+ *****************************************************************************/
+int32_t _sdio_direct(st_sdhndl_t *p_hndl, uint8_t *buff, uint32_t func,
+                        uint32_t adr, uint32_t rw_flag, uint32_t raw_flag)
+{
+    uint32_t arg = 0;
+    uint16_t cmd;
+
+    /* ---- check media type ---- */
+    if ((p_hndl->media_type & SD_MEDIA_IO) == 0)
+    {
+        _sd_set_err(p_hndl, SD_ERR_CARD_TYPE);
+        return SD_ERR_CARD_TYPE;
+    }
+
+    /* check read register address and function number */
+    if ((func > 7) || (adr > 0x1ffff))
+    {
+        _sd_set_err(p_hndl, SD_ERR);
+        return p_hndl->error;
+    }
 
     /* Cast to an appropriate type */
-    layout = sddev_cd_layout((int32_t)(p_hndl->sd_port));
-    if (SD_OK == layout)
+    arg = ((rw_flag << 31) | (func << 28) | (raw_flag << 27) | (adr << 9) | (uint32_t) * buff);
+
+    if (1 == rw_flag)
     {
-        /* Cast to an appropriate type */
-        reg = SDMMC.SD_INFO1.WORD.LL;
-        if (SD_CD_SOCKET == p_hndl->cd_port)
-        {
-            /* Cast to an appropriate type */
-            reg &= (uint16_t)SD_INFO1_MASK_STATE_CD;    /* check CD level   */
-#if defined(TARGET_RZ_A2M_SBEV)
-            if ((reg & SD_INFO1_MASK_STATE_CD) == 0) {
-                reg |= SD_INFO1_MASK_STATE_CD;
-            } else {
-                reg &= ~SD_INFO1_MASK_STATE_CD;
-            }
-#endif
-        }
-        else
-        {
-            /* Cast to an appropriate type */
-            reg &= (uint16_t)SD_INFO1_MASK_STATE_DAT3;  /* check DAT3 level */
-        }
+        cmd = CMD52_W;      /* write */
     }
     else
     {
-        reg = SD_CD_DETECT;                             /* Always inserted */
+        cmd = CMD52_R;      /* read */
     }
 
-    if (reg)
+    /* issue CMD */
+    if (_sd_send_iocmd(p_hndl, cmd, arg) != SD_OK)
     {
-        return SD_OK;   /* inserted */
+        return p_hndl->error;
     }
 
-    return SD_ERR;  /* no card */
+    /* Set Read data from R5 Respose */
+    *buff = (uint8_t)(p_hndl->resp_status & 0x00ff);
+
+    /* enable resp end and illegal access interrupts */
+    _sd_set_int_mask(p_hndl, SD_INFO1_MASK_RESP, SD_INFO2_MASK_ILA);
+
+    return p_hndl->error;
 }
 /******************************************************************************
- End of function _sd_check_media
+ End of function _sdio_direct
  *****************************************************************************/
-
 
 /* End of File */

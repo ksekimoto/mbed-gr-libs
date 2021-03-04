@@ -150,6 +150,9 @@ DisplayBase::Graphics_Video_init( video_input_sel_t video_input_sel, video_ext_i
     graphics_error_t error;
 
     if ((video_input_sel == INPUT_SEL_EXT)
+#if defined(TARGET_RZ_A1H)
+     || (video_input_sel == INPUT_SEL_VDEC)
+#endif /* TARGET_RZ_A1H */
      || (video_input_sel == INPUT_SEL_CEU)) {
         _video_input_sel = video_input_sel;
 
