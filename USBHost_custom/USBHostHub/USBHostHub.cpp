@@ -130,7 +130,7 @@ bool USBHostHub::connect(USBDeviceConnected * dev)
         for (uint8_t j = 1; j <= nb_port; j++) {
             setPortFeature(PORT_POWER_FEATURE, j);
         }
-        ThisThread::sleep_for(buf[5]*2);
+        ThisThread::sleep_for(buf[5]*2ms);
 
         host->interruptRead(dev, int_in, buf, 1, false);
         dev_connected = true;
@@ -234,7 +234,7 @@ void USBHostHub::portReset(uint8_t port) {
     USB_DBG("reset port %d on hub: %p [this: %p]", port, dev, this)
     setPortFeature(PORT_RESET_FEATURE, port);
 #if defined(TARGET_RZ_A1H)
-    ThisThread::sleep_for(50);   // Reset release waiting for Hi-Speed check.
+    ThisThread::sleep_for(50ms);   // Reset release waiting for Hi-Speed check.
 #endif
     while(1) {
         status = getPortStatus(port);
@@ -246,7 +246,7 @@ void USBHostHub::portReset(uint8_t port) {
             host->deviceDisconnected(dev->getHub() + 1, port, this, 0);
             break;
         }
-        ThisThread::sleep_for(10);
+        ThisThread::sleep_for(10ms);
     }
 }
 

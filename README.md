@@ -1,7 +1,7 @@
 # **Mbed Library for GR-Boards**  mbed-gr-libs
 **日本語版については[こちら](README_JPN.md)をご覧ください。**  
 
-GR-PEACH, GR-LYCHEE and RZ/A2M board library group. The library includes the following functions.  
+GR-PEACH, GR-LYCHEE and GR-MANGO board library group. The library includes the following functions.  
 * Connect camera and LCD
 * Connect USB memory and SD card
 * Cache control
@@ -13,7 +13,7 @@ GR-PEACH, GR-LYCHEE and RZ/A2M board library group. The library includes the fol
 * DisplayApp (Image display on PC display with USB connection)
 * ASCII font
 * Communication speed of SD card
-* DRP (RZ/A2M only)
+* DRP (GR-MANGO only)
 
 
 ## Connect camera and LCD
@@ -191,11 +191,11 @@ int main() {
 ```
 
 ## Communication speed of SD card
-RZ/A2M communicates with SD speed class. If you need HS speed class or UHS speed class with RZ/A2M, please contact us from [here](https://www.renesas.com/jp/en/support/contact.html).  
+GR-MANGO communicates with SD speed class. If you need HS speed class or UHS speed class with GR-MANGO, please contact us from [here](https://www.renesas.com/jp/en/support/contact.html).  
 GR-PEACH and GR-LYCHEE access an SD Card using SPI bus.  
 Please refer to ``SdUsbConnect class`` for connection.  
 
 
-## DRP (RZ/A2M only)
+## DRP (GR-MANGO only)
 DRP(Dynamically Reconfigurable Processor) is the programmable hardware which have both the flexibility of software and the speed of hardware. The firmware which define processing, can be renewed immediately.  
 Please see ``drp-for-mbed/TARGET_RZ_A2XX/r_drp/doc`` for details.  

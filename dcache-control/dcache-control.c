@@ -30,7 +30,10 @@ void dcache_clean(void * p_buf, uint32_t size) {
         L1C_CleanDCacheMVA((void *)addr);
     }
 #if defined(TARGET_RZ_A2XX)
-    R_CACHE_L2CleanAll();
+    /* Check internal RAM or not */
+    if(((uint32_t)p_buf&0xF0000000) != 0x80000000) {
+        R_CACHE_L2CleanAll();
+    }
 #endif
 }
 
@@ -40,11 +43,15 @@ void dcache_invalid(void * p_buf, uint32_t size) {
     uint32_t addr;
 
     /* Data cache invalid */
+#if defined(TARGET_RZ_A2XX)
+    /* Check internal RAM or not */
+    if(((uint32_t)p_buf&0xF0000000) != 0x80000000) {
+        R_CACHE_L2InvalidAll();
+    }
+#endif
+    /* L1 Data cache invalid */
     for (addr = start_addr; addr < end_addr; addr += 0x20) {
         L1C_InvalidateDCacheMVA((void *)addr);
     }
-#if defined(TARGET_RZ_A2XX)
-    R_CACHE_L2InvalidAll();
-#endif
 }
 

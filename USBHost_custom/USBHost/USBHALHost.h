@@ -155,6 +155,9 @@ private:
     void UsbIrqhandler();
 
     void memInit();
+#if defined(TARGET_RZ_A2XX)
+    void usbh_port_clean_seq();
+#endif /* TARGET_RZ_A2XX */
 
     HCCA volatile * usb_hcca;           //256 bytes aligned
     uint8_t volatile  * usb_edBuf;      //4 bytes aligned

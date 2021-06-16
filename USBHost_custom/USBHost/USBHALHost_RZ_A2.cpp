@@ -70,7 +70,11 @@ void USBHALHost::init() {
 #if USB_HOST_CH == 0
 #if defined(TARGET_GR_MANGO)
     pin_function(P1_0, 5); // VBUSEN0
+#if defined(TARGET_GR_MANGO_BETA)
     pin_function(P1_1, 5); // OVRCUR0
+#else
+    pin_function(PJ_5, 5); // OVRCUR0
+#endif
     pin_function(P5_2, 3); // VBUSIN0
 #else
     pin_function(PC_6, 1); // VBUSEN0
@@ -101,18 +105,18 @@ void USBHALHost::init() {
     USBX0.COMMCTRL.BIT.OTG_PERI = 0;        /* 0 : Host, 1 : Peri */
     USB_MX.LPSTS.WORD   |= 0x4000u;
     USBX0.USBCTR.LONG = 0x00000000;
-    ThisThread::sleep_for(1);
+    ThisThread::sleep_for(1ms);
     USBX0.LINECTRL1.LONG = 0;
 
     USBX0.HCCONTROL.LONG       = 0; // HARDWARE RESET
     USBX0.HCCONTROLHEADED.LONG = 0; // Initialize Control list head to Zero
     USBX0.HCBULKHEADED.LONG    = 0; // Initialize Bulk list head to Zero
 
-    ThisThread::sleep_for(1);
+    ThisThread::sleep_for(1ms);
     USBX0.HCRHPORTSTATUS1.LONG = 0x00000100;
 
     // Wait 100 ms before apply reset
-    ThisThread::sleep_for(100);
+    ThisThread::sleep_for(100ms);
 
     // software reset
     USBX0.HCCOMMANDSTATUS.LONG = OR_CMD_STATUS_HCR;
@@ -144,15 +148,17 @@ void USBHALHost::init() {
     USBX0.HCRHPORTSTATUS1.LONG = OR_RH_PORT_CSC;
     USBX0.HCRHPORTSTATUS1.LONG = OR_RH_PORT_PRSC;
 
-    GIC_EnableIRQ(USBHIX_IRQn);
-
     // Check for any connected devices
     if (USBX0.HCRHPORTSTATUS1.LONG & OR_RH_PORT_CCS) {
         //Device connected
-        ThisThread::sleep_for(150);
+        ThisThread::sleep_for(150ms);
         USB_DBG("Device connected (%08x)\n\r", USBX0.HCRHPORTSTATUS1.LONG);
         deviceConnected(0, 1, USBX0.HCRHPORTSTATUS1.LONG & OR_RH_PORT_LSDA);
+        //reset interrupt request
+        USBX0.HCINTERRUPTSTATUS.LONG = USBX0.HCINTERRUPTSTATUS.LONG;
+        USBX0.HCRHPORTSTATUS1.LONG   = OR_RH_PORT_CSC|OR_RH_PORT_PRSC;
     }
+    GIC_EnableIRQ(USBHIX_IRQn);
 }
 
 uint32_t USBHALHost::controlHeadED() {
@@ -303,6 +309,7 @@ void USBHALHost::UsbIrqhandler() {
 
                     //Root device disconnected
                     else {
+                        usbh_port_clean_seq();
                         deviceDisconnected(0, 1, NULL, usb_hcca->DoneHead & 0xFFFFFFFE);
                     }
                 }
@@ -321,4 +328,55 @@ void USBHALHost::UsbIrqhandler() {
         }
     }
 }
+
+void USBHALHost::usbh_port_clean_seq(void)
+{
+    if(0 == USBX0.HCRHDESCRIPTORA.BIT.NPS)
+    {
+        if(USBX0.HCRHDESCRIPTORA.BIT.PSM & USBX0.HCRHDESCRIPTORB.BIT.PPCM)
+        {
+            /* A */
+            USBX0.HCRHPORTSTATUS1.LONG |= 0x00000200; /* LSDA = 1 */
+            USBX0.HCRHPORTSTATUS1.LONG |= 0x00000008; /* POCI = 1 */
+            USBX0.PORTSC1.LONG         |= 0x00002000; /* PortOwner = 1 */
+            USBX0.PORTSC1.LONG         &= 0xFFFFDFFF; /* PortOwner = 0 */
+            USBX0.HCRHPORTSTATUS1.LONG |= 0x00000100; /* POCI = 1 */
+        }
+        else
+        {
+            /* B */
+            USBX0.HCRHSTATUS.LONG      |= 0x00000001; /* PPS  = 1 */
+            USBX0.HCRHPORTSTATUS1.LONG |= 0x00000008; /* POCI = 1 */
+            USBX0.PORTSC1.LONG         |= 0x00002000; /* PortOwner = 1 */
+            USBX0.PORTSC1.LONG         &= 0xFFFFDFFF; /* PortOwner = 0 */
+            USBX0.HCRHSTATUS.LONG      |= 0x00010000; /* LPSC = 1 */
+        }
+    }
+    else
+    {
+        if(USBX0.HCRHDESCRIPTORA.BIT.PSM & USBX0.HCRHDESCRIPTORB.BIT.PPCM)
+        {
+            /* C */
+            USBX0.HCRHDESCRIPTORA.LONG &= 0xFFFFFDFF; /* NPS  = 0 */
+            USBX0.HCRHPORTSTATUS1.LONG |= 0x00000200; /* LSDA = 1 */
+            USBX0.HCRHPORTSTATUS1.LONG |= 0x00000008; /* POCI = 1 */
+            USBX0.PORTSC1.LONG         |= 0x00002000; /* PortOwner = 1 */
+            USBX0.PORTSC1.LONG         &= 0xFFFFDFFF; /* PortOwner = 0 */
+            USBX0.HCRHPORTSTATUS1.LONG |= 0x00000100; /* POCI = 1 */
+            USBX0.HCRHDESCRIPTORA.LONG |= 0x00000200; /* NPS  = 0 */
+        }
+        else
+        {
+            /* D */
+            USBX0.HCRHDESCRIPTORA.LONG &= 0xFFFFFDFF; /* NPS  = 0 */
+            USBX0.HCRHSTATUS.LONG      |= 0x00000001; /* PPS  = 1 */
+            USBX0.HCRHPORTSTATUS1.LONG |= 0x00000008; /* POCI = 1 */
+            USBX0.PORTSC1.LONG         |= 0x00002000; /* PortOwner = 1 */
+            USBX0.PORTSC1.LONG         &= 0xFFFFDFFF; /* PortOwner = 0 */
+            USBX0.HCRHSTATUS.LONG      |= 0x00010000; /* LPSC = 1 */
+            USBX0.HCRHDESCRIPTORA.LONG |= 0x00000200; /* NPS  = 0 */
+        }
+    }
+}
+
 #endif

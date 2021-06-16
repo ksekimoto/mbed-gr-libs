@@ -25,9 +25,11 @@
   #define CAMERA_MT9V111                  0x0002
   #define CAMERA_OV7725                   0x0003
   #define CAMERA_OV5642                   0x0004
+  #define CAMERA_OV2640                   0x0005
   #define CAMERA_WIRELESS_CAMERA          0x0083
   #define CAMERA_RASPBERRY_PI             0x2000
   #define CAMERA_RASPBERRY_PI_WIDE_ANGLE  0x2001
+  #define CAMERA_RASPBERRY_PI_832X480     0x2002
 
   // shield-type
   #define SHIELD_AUDIO_CAMERA         1
@@ -78,10 +80,14 @@
     #include "OV7725_config.h"
   #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_OV5642
     #include "OV5642_config.h"
+  #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_OV2640
+    #include "OV2640_config.h"
   #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_RASPBERRY_PI
     #include "RaspberryPi_config.h"
   #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_RASPBERRY_PI_WIDE_ANGLE
     #include "RaspberryPi_wide_angle_config.h"
+  #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_RASPBERRY_PI_832X480
+    #include "RaspberryPi_832x480_config.h"  
   #endif
 #endif
 
@@ -99,12 +105,19 @@
   #define TF043HV001A0                (0x0005)
   #define ATM0430D25                  (0x0006)
   #define FG040346DSSWBG03            (0x0007)
+  #define EP952                       (0x0008)
+  #define LCD800x480                  (0x0009)
 
   #define GR_PEACH_RSK_TFT            (RSK_TFT|LCD_LVDS)
   #define LVDS_TO_HDMI                (TFP410PAP|LCD_LVDS)
   #define DVI_STICK                   (TFP410PAP)
-  #define RGB_TO_HDMI                 (TFP410PAP)
-
+  
+  #if (1) /* GR-MANGO rev.B or later */
+    #define RGB_TO_HDMI               (EP952)
+  #else	/* GR-MANGO rev.A */
+    #define RGB_TO_HDMI               (TFP410PAP)
+  #endif 
+ 
   #ifndef MBED_CONF_APP_LCD_TYPE
     #if defined(TARGET_RZ_A1H)
       #define MBED_CONF_APP_LCD_TYPE    GR_PEACH_4_3INCH_SHIELD
@@ -133,6 +146,8 @@
     #include "LCD_config_ATM0430D25.h"
   #elif MBED_CONF_APP_LCD_TYPE == FG040346DSSWBG03
     #include "LCD_config_FG040346DSSWBG03.h"
+  #elif MBED_CONF_APP_LCD_TYPE == LCD800x480
+    #include "LCD_config_LCD800x480.h"
   #elif MBED_CONF_APP_LCD_TYPE == LVDS_TO_HDMI
     #include "LCD_config_lvds_to_hdmi.h"
   #elif MBED_CONF_APP_LCD_TYPE == RSK_TFT

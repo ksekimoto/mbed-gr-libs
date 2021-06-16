@@ -28,11 +28,6 @@
 Includes   <System Includes> , "Project Includes"
 ******************************************************************************/
 #include "r_typedefs.h"
-#if(1) /* mbed */
-#else
-#include "r_gpio_drv_api.h"
-#include "r_gpio_drv_sc_cfg.h"
-#endif
 #include "r_sdif.h"
 
 #ifndef SRC_RENESAS_CONFIG_R_SDHI_SIMPLIFIED_DRV_SC_CFG_H_
@@ -62,10 +57,6 @@ typedef struct
 {
     int_t                           channel;
     st_sdhi_config_t                config;
-#if(1) /* mbed */
-#else
-    st_r_drv_gpio_pin_init_table_t  pin;
-#endif
 } st_r_drv_sdhi_sc_config_t;
 
 /******************************************************************************
@@ -75,23 +66,9 @@ Macro definitions
 /******************************************************************************
 Variable Externs
 ******************************************************************************/
-#if(1) /* mbed */
-#else
-#if defined(__cplusplus)
-extern "C" {
-#endif
-/* This code is auto-generated. Do not edit manually */
-extern int32_t fat_sample_cd_int_cb_function(int32_t sd_port, int32_t cd);
-/* End of modification */
-#if defined(__cplusplus)
-}
-#endif
-#endif
-
 /**
  * @section SDHI_SC_TABLE Smart Configurator settings table.
  */
-#if(1) /* mbed */
 static const st_r_drv_sdhi_sc_config_t SDHI_SC_TABLE[] =
 {
     /* This code is auto-generated. Do not edit manually */
@@ -106,7 +83,7 @@ static const st_r_drv_sdhi_sc_config_t SDHI_SC_TABLE[] =
     { 1, 
         {
             SD_CD_ENABLED, 
-#if defined(TARGET_RZ_A2M_SBEV)
+#if defined(TARGET_RZ_A2M_SBEV) || defined(TARGET_GR_MANGO)
             SD_WP_DISABLED, 
 #else
             SD_WP_ENABLED, 
@@ -117,37 +94,6 @@ static const st_r_drv_sdhi_sc_config_t SDHI_SC_TABLE[] =
     },
     /* End of modification */
 };
-#else
-static const st_r_drv_sdhi_sc_config_t SDHI_SC_TABLE[] =
-{
-    /* This code is auto-generated. Do not edit manually */
-    { 0, 
-        {
-            SD_CD_ENABLED, 
-            SD_WP_ENABLED, 
-            SD_CB_USED, 
-            fat_sample_cd_int_cb_function, 
-        }, 
-        {
-            &GPIO_SC_TABLE_sdhi_simplified0[0], 
-            sizeof(GPIO_SC_TABLE_sdhi_simplified0)/sizeof(st_r_drv_gpio_sc_config_t), 
-        }
-    },
-    { 1, 
-        {
-            SD_CD_ENABLED, 
-            SD_WP_ENABLED, 
-            SD_CB_UNUSED, 
-            NULL, 
-        }, 
-        {
-            &GPIO_SC_TABLE_sdhi_simplified1[0], 
-            sizeof(GPIO_SC_TABLE_sdhi_simplified1)/sizeof(st_r_drv_gpio_sc_config_t), 
-        }
-    },
-    /* End of modification */
-};
-#endif
 
 
 #endif /* SRC_RENESAS_CONFIG_R_SDHI_SIMPLIFIED_DRV_SC_CFG_H_ */

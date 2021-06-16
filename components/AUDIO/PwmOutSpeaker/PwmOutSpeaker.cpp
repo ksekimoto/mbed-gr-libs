@@ -56,7 +56,7 @@ bool PwmOutSpeaker::format(char length) {
 }
 
 bool PwmOutSpeaker::frequency(int hz) {
-    int wk_us;
+    us_timestamp_t wk_us;
 
     switch (hz) {
         case 48000:
@@ -84,8 +84,13 @@ bool PwmOutSpeaker::frequency(int hz) {
         _speaker_r->write(0.5f);
         _speaker_r->period_us(10);  // 100kHz
     }
-    wk_us = (int)(1000000.0f / hz * _hz_multi + 0.5f);
+    wk_us = (us_timestamp_t)(1000000.0f / hz * _hz_multi + 0.5f);
+#if 1
+    std::chrono::microseconds wwk_us(wk_us);
+    _timer.attach(Callback<void()>(this, &PwmOutSpeaker::sound_out), wwk_us);
+#else
     _timer.attach_us(Callback<void()>(this, &PwmOutSpeaker::sound_out), wk_us);
+#endif
     _data_cnt = 0;
 
     return true;
@@ -111,7 +116,7 @@ int PwmOutSpeaker::write(void * const p_data, uint32_t data_size, const rbsp_dat
         } else {
             _data_cnt = 0;
             while (((_bottom + 2) & MSK_RING_BUFF) == _top) {
-                ThisThread::sleep_for(1);
+                ThisThread::sleep_for(1ms);
             }
 
             wk_vol_l = _speaker_vol_l;
@@ -158,7 +163,7 @@ void PwmOutSpeaker::sound_out(void) {
 
 void PwmOutSpeaker::audio_process() {
     while (true) {
-        _sound_out_req.wait();
+        _sound_out_req.acquire();
         if (_top != _bottom) {
             if (_speaker_l != NULL) {
                 _speaker_l->write(_pwm_duty_buf[_top + 0]);

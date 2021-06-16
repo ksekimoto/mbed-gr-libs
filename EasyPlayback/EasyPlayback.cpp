@@ -163,7 +163,7 @@ bool EasyPlayback::play(const char* filename)
 
         while (true) {
             while ((_pause) && (!_skip)) {
-                ThisThread::sleep_for(100);
+                ThisThread::sleep_for(100ms);
             }
             if (_skip) {
                 break;
@@ -208,7 +208,7 @@ bool EasyPlayback::play(const char* filename)
                         dcache_clean(p_buf, audio_data_size);
                         _audio->write(p_buf, audio_data_size, &audio_write_async_ctl);
                     }
-                    if ((_buff_index + 1) < _audio_write_buff_num) {
+                    if ((uint32_t)(_buff_index + 1) < _audio_write_buff_num) {
                         _buff_index++;
                     } else {
                         _buff_index = 0;
@@ -218,7 +218,7 @@ bool EasyPlayback::play(const char* filename)
                 }
             }
         }
-        ThisThread::sleep_for(500);
+        ThisThread::sleep_for(500ms);
         ret = true;
     }
     delete decoder;

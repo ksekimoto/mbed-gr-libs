@@ -1,5 +1,5 @@
 # **Mbed GRボード用ライブラリ**  mbed-gr-libs
-GR-PEACH、GR-LYCHEE、RZ/A2Mボード用のライブラリ群です。ライブラリには以下の機能が含まれます。  
+GR-PEACH、GR-LYCHEE、GR-MANGOボード用のライブラリ群です。ライブラリには以下の機能が含まれます。  
 * カメラとLCDの接続
 * USBメモリとSDカードの接続
 * キャッシュ制御
@@ -11,7 +11,7 @@ GR-PEACH、GR-LYCHEE、RZ/A2Mボード用のライブラリ群です。ライブ
 * DisplayApp (USB接続でPCディスプレイに画像表示)
 * ASCIIフォント
 * SDカードの通信速度
-* DRP (RZ/A2Mのみ)
+* DRP (GR-MANGOのみ)
 
 ## カメラとLCDの接続
 ``EasyAttach_CameraAndLCD``を使うことで、カメラとLCDの接続を簡単に行うことができます。  
@@ -134,7 +134,7 @@ GR-Board内のJPEG画像をPC上に表示するためのライブラリです。
 
 ![](docs/img/usb0_and_button.jpg)  
 
-RZ/A2Mの場合は``USBチャネル1``に接続してください。  
+GR-MANGOの場合は``USBチャネル1``に接続してください。  
 Windows10以外ご使用の場合、ドライバのインストールが必要となります。下記サイトのからドライバーをダウンロードできます。  
 
 https://os.mbed.com/handbook/USBSerial
@@ -188,11 +188,11 @@ int main() {
 ```
 
 ## SDカードの通信速度
-RZ/A2MはSDスピードクラスで通信を行います。RZ/A2MでHSスピードクラス、または、UHSスピードクラスが必要な方は、[こちら]((https://www.renesas.com/jp/ja/support/contact.html)よりお問合せください。  
+GR-MANGOはSDスピードクラスで通信を行います。GR-MANGOでHSスピードクラス、または、UHSスピードクラスが必要な方は、[こちら]((https://www.renesas.com/jp/ja/support/contact.html)よりお問合せください。  
 GR-PEACH、GR-LYCHEEは SPIバスを使ってSDカードにアクセスします。  
 接続については``SdUsbConnectクラス``を参照ください。  
 
 
-## DRP (RZ/A2Mのみ)
+## DRP (GR-MANGOのみ)
 DRP(Dynamically Reconfigurable Processor)はソフトウェアの柔軟さとハードウェアの高速性を兼ね備えたプログラマブルハードウェアです。処理を定義するファームウェアの書き換えが瞬間に行えます。  
 詳しくは ``drp-for-mbed/TARGET_RZ_A2XX/r_drp/doc`` を参照ください。  

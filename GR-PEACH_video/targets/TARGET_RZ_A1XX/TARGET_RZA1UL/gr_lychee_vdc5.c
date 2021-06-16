@@ -719,6 +719,14 @@ drv_graphics_error_t DRV_Graphics_Stop ( drv_graphics_layer_t layer_id )
             drv_error = DRV_GRAPHICS_VDC5_ERR;
         }
     }
+
+    if( drv_error == DRV_GRAPHICS_OK ) {
+        /* Release data control */
+        error = R_VDC5_ReleaseDataControl ( ch, vdc5_layer_id );
+        if (error != VDC5_OK) {
+            drv_error = DRV_GRAPHICS_VDC5_ERR;
+        }
+    }
     return drv_error;
 }   /* End of function DRV_Graphics_Stop() */
 
@@ -786,6 +794,14 @@ drv_graphics_error_t DRV_Video_Stop ( drv_video_input_channel_t video_input_ch )
         if( drv_error == DRV_GRAPHICS_OK ) {
             /* Stop process */
             error = R_VDC5_StopProcess ( ch, vdc5_layer_id );
+            if (error != VDC5_OK) {
+                drv_error = DRV_GRAPHICS_VDC5_ERR;
+            }
+        }
+
+        if( drv_error == DRV_GRAPHICS_OK ) {
+            /* Release data control */
+            error = R_VDC5_ReleaseDataControl ( ch, vdc5_layer_id );
             if (error != VDC5_OK) {
                 drv_error = DRV_GRAPHICS_VDC5_ERR;
             }
