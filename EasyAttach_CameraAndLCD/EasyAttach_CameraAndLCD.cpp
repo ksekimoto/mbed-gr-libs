@@ -340,6 +340,8 @@ static DisplayBase::graphics_error_t camera_init(DisplayBase& Display, uint16_t 
     OV7725_config camera_cfg;
   #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_OV5642
     OV5642_config camera_cfg;
+  #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_OV2640
+    OV2640_config camera_cfg;
   #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_RASPBERRY_PI
     RaspberryPi_config camera_cfg;
   #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_RASPBERRY_PI_WIDE_ANGLE
