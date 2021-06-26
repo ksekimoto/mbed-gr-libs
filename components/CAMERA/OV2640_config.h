@@ -262,7 +262,7 @@ public:
         if (ret != 0) {
             return false;
         }
-        ThisThread::sleep_for(1);
+        ThisThread::sleep_for(1ms);
         printf("OV2640 Initialise() 2\n");
 
         for (uint32_t i = 0; i < (sizeof(OV2640_InitRegTable) / 2) ; i++) {
@@ -398,7 +398,7 @@ public:
             }
             /* AGC[7:0] */
             cmd[0] = 0x00;
-            cmd[1] = (uint8_t)(usManualGain >> 0xff);
+            cmd[1] = (uint8_t)(usManualGain & 0xff);
             ret = sccb_write(OV2640_ADDR, &cmd[0], 2);
             if (ret != 0) {
                 return false;

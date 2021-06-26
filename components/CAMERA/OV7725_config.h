@@ -4,6 +4,7 @@
 
 #include "mbed.h"
 #include "camera_config.h"
+#include "sccb.h"
 
 class OV7725_config : public camera_config {
 
@@ -83,21 +84,52 @@ public:
         };
         const char sw_reset_cmd[2] = {0x12, 0x80};
         int ret;
-        I2C mI2c_(I2C_SDA, I2C_SCL);
-        mI2c_.frequency(150000);
+        //I2C mI2c_(I2C_SDA, I2C_SCL);
+        //mI2c_.frequency(150000);
 
-        if (mI2c_.write(0x42, sw_reset_cmd, 2) != 0) {
+        if (sccb_write(0x42, sw_reset_cmd, 2) != 0) {
             return false;
         }
         ThisThread::sleep_for(1ms);
 
-        for (uint32_t i = 0; i < (sizeof(OV7725_InitRegTable) / 2) ; i++) {
-            ret = mI2c_.write(0x42, OV7725_InitRegTable[i], 2);
+        char cmd[2];
+        int id = 0;
+        cmd[0]=0xff;
+        cmd[1]=0x01;
+        ret = sccb_write(0x42, &cmd[0], 2);
+        if (ret != 0) {
+            return false;
+        }
+        cmd[0]=0x0a;
+        ret = sccb_write(0x42, &cmd[0], 1);
+        if (ret != 0) {
+            return false;
+        }
+        ret = sccb_read(0x42, &cmd[1], 1);
+        if (ret != 0) {
+            return false;
+        }
+        id = (cmd[1] & 0xff);
+        cmd[0]=0x0b;
+        ret = sccb_write(0x42, &cmd[0], 1);
+        if (ret != 0) {
+            return false;
+        }
+        ret = sccb_read(0x42, &cmd[1], 1);
+        if (ret != 0) {
+            return false;
+        }
+        id = (id << 8) + (cmd[1] & 0xff);
+        printf("Product ID: %04x found\n", id);
+
+#if 1
+        for (uint32_t i = 0; i < (sizeof(OV7725_InitRegTable)) / 2 ; i ++) {
+            ret = sccb_write(0x42, (const char *)&OV7725_InitRegTable[i], 2);
             if (ret != 0) {
                 return false;
             }
         }
-
+#endif
         return true;
     }
 
@@ -122,22 +154,22 @@ public:
      *
      * @param[in]      bAuto             : Automatic adjustment ON/OFF(AEC/AGC)
      * @param[in]      usManualExposure  : Exposure time at automatic adjustment OFF  (number of lines)
-     * @param[in]      usManualGain      : Gain at automatic adjustment OFF i0x00-0xFF)
+     * @param[in]      usManualGain      : Gain at automatic adjustment OFF ï¿½i0x00-0xFF)
      * @return true = success, false = failure
      */
     static bool SetExposure(bool bAuto, uint16_t usManualExposure, uint8_t usManualGain) {
         int ret;
         char cmd[2];
-        I2C mI2c_(I2C_SDA, I2C_SCL);
-        mI2c_.frequency(150000);
+        //I2C mI2c_(I2C_SDA, I2C_SCL);
+        //mI2c_.frequency(150000);
 
         /* COM8(AGC Enable/AEC Enable) */
         cmd[0] = 0x13;
-        ret = mI2c_.write(0x42, &cmd[0], 1);
+        ret = sccb_write(0x42, &cmd[0], 1);
         if (ret != 0) {
             return false;
         }
-        ret = mI2c_.read(0x42, &cmd[1], 1);
+        ret = sccb_read(0x42, &cmd[1], 1);
         if (ret != 0) {
             return false;
         }
@@ -148,7 +180,7 @@ public:
         } else {
             cmd[1] &= (uint8_t)~0x05;
         }
-        ret = mI2c_.write(0x42, &cmd[0], 2);
+        ret = sccb_write(0x42, &cmd[0], 2);
         if (ret != 0) {
             return false;
         }
@@ -157,14 +189,14 @@ public:
             /* AECH/AECL(exposure) */
             cmd[0] = 0x08;
             cmd[1] = (uint8_t)((usManualExposure & 0xFF00) >> 8);
-            ret = mI2c_.write(0x42, &cmd[0], 2);
+            ret = sccb_write(0x42, &cmd[0], 2);
             if (ret != 0) {
                 return false;
             }
 
             cmd[0] = 0x10;
             cmd[1] = (uint8_t)(usManualExposure & 0x00FF);
-            ret = mI2c_.write(0x42, &cmd[0], 2);
+            ret = sccb_write(0x42, &cmd[0], 2);
             if (ret != 0) {
                 return false;
             }
@@ -172,7 +204,7 @@ public:
             /* GAIN */
             cmd[0] = 0x00;
             cmd[1] = usManualGain;
-            ret = mI2c_.write(0x42, &cmd[0], 2);
+            ret = sccb_write(0x42, &cmd[0], 2);
             if (ret != 0) {
                 return false;
             }

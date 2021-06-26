@@ -1,6 +1,6 @@
 
-#ifndef RASPBERRY_PI_CONFIG_H
-#define RASPBERRY_PI_CONFIG_H
+#ifndef RASPBERRY_PI_832x480_CONFIG_H
+#define RASPBERRY_PI_832x480_CONFIG_H
 
 #include "mbed.h"
 #include "DisplayBace.h"

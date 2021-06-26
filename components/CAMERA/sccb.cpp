@@ -6,16 +6,22 @@
 #include "mbed.h"
 #include "sccb.h"
 
+#define MHZ_COUNT       30
 #define SCCB_CLK_WAIT   50
 #define SCCB_WAIT_1     2
 #define SCCB_WAIT_2     10
 #define SCCB_WAIT_3     80
 
-void sccb_wait(int us) {
-    wait_us(us);
+static void sccb_wait(int us) {
+    //wait_us(us);
+    while (us-- > 0) {
+        for (int i = 0; i < MHZ_COUNT; i++) {
+            __asm__ __volatile__ ("nop");
+        }
+    }
 }
 
-void sccb_start(void) {
+static void sccb_start(void) {
     DigitalOut pinSCL(I2C_SCL);
     DigitalInOut pinSDA(I2C_SDA);
     pinSDA.output();
@@ -33,7 +39,7 @@ void sccb_start(void) {
     sccb_wait(SCCB_CLK_WAIT);
 }
 
-void sccb_stop(void) {
+static void sccb_stop(void) {
     DigitalOut pinSCL(I2C_SCL);
     DigitalInOut pinSDA(I2C_SDA);
     pinSDA.output();
@@ -46,7 +52,7 @@ void sccb_stop(void) {
     sccb_wait(SCCB_CLK_WAIT);
 }
 
-void sccb_noack(void) {
+static void sccb_noack(void) {
     DigitalOut pinSCL(I2C_SCL);
     DigitalInOut pinSDA(I2C_SDA);
     pinSDA.output();
@@ -64,13 +70,13 @@ void sccb_noack(void) {
     sccb_wait(SCCB_CLK_WAIT);
 }
 
-int sccb_write_byte(unsigned char m_data) {
+static int sccb_write_byte(unsigned char m_data) {
     DigitalOut pinSCL(I2C_SCL);
     DigitalInOut pinSDA(I2C_SDA, PIN_INPUT, OpenDrain, 0);
     pinSDA.output();
 
     unsigned char j;
-    int sccb_state = 1;
+    int sccb_state = 0;
 
     for (j = 0; j < 8; j++) {
         if ((m_data << j) & 0x80) {
@@ -91,9 +97,9 @@ int sccb_write_byte(unsigned char m_data) {
     pinSCL = 1;
     sccb_wait(SCCB_WAIT_3);
     if (pinSDA != 0) {
-        sccb_state = 0; // NG
+        sccb_state = -1; // NG
     } else {
-        sccb_state = 1; // OK
+        sccb_state = 0;  // OK
     }
     pinSCL = 0;
     sccb_wait(SCCB_CLK_WAIT);
@@ -101,7 +107,7 @@ int sccb_write_byte(unsigned char m_data) {
     return sccb_state;
 }
 
-unsigned char sccb_read_byte(void) {
+static unsigned char sccb_read_byte(void) {
     DigitalOut pinSCL(I2C_SCL);
     DigitalInOut pinSDA(I2C_SDA, PIN_INPUT, OpenDrain, 0);
 
@@ -126,22 +132,22 @@ unsigned char sccb_read_byte(void) {
 }
 
 // OK: 0
-// NG: 1
+// NG: -1
 int sccb_write(int address, const char *data, int length) {
-    int ret = 1;
+    int ret = 0;
     sccb_start();
     ret = sccb_write_byte((unsigned char) address);
-    if (ret == 0) {
+    if (ret != 0) {
         sccb_stop();
-        return 1;
+        return -1;
     }
     sccb_wait(SCCB_WAIT_2);
     int i;
     for (i = 0; i < length; i++) {
         ret = sccb_write_byte((unsigned char) *data++);
-        if (ret == 0) {
+        if (ret != 0) {
             sccb_stop();
-            return 1;
+            return -1;
         }
     }
     sccb_stop();
@@ -149,15 +155,15 @@ int sccb_write(int address, const char *data, int length) {
 }
 
 // OK: 0
-// NG: 1
+// NG: -1
 int sccb_read(int address, char *data, int length) {
     int ret = 0;
     address += 1;
     sccb_start();
     ret = sccb_write_byte((unsigned char) address);
-    if (ret == 0) {
+    if (ret != 0) {
         sccb_stop();
-        return 1;
+        return -1;
     }
     sccb_wait(SCCB_WAIT_2);
     int i;
