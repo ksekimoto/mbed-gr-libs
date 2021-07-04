@@ -26,6 +26,7 @@
   #define CAMERA_OV7725                   0x0003
   #define CAMERA_OV5642                   0x0004
   #define CAMERA_OV2640                   0x0005
+  #define CAMERA_OV7670                   0x0006
   #define CAMERA_WIRELESS_CAMERA          0x0083
   #define CAMERA_RASPBERRY_PI             0x2000
   #define CAMERA_RASPBERRY_PI_WIDE_ANGLE  0x2001
@@ -82,6 +83,8 @@
     #include "OV5642_config.h"
   #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_OV2640
     #include "OV2640_config.h"
+  #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_OV7670
+    #include "OV7670_config.h"
   #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_RASPBERRY_PI
     #include "RaspberryPi_config.h"
   #elif MBED_CONF_APP_CAMERA_TYPE == CAMERA_RASPBERRY_PI_WIDE_ANGLE
