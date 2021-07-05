@@ -26,40 +26,48 @@
 #include "camera_config.h"
 #include "sccb.h"
 
-#if defined(TARGET_RZ_A2M_EVB) || defined(TARGET_RZ_A2M_EVB_HF) || defined(TARGET_RZ_A2M_SBEV) || defined(TARGET_SEMB1402)
-static I2C i2c_dv(PD_5, PD_4);
-#else
-static I2C i2c_dv(I2C_SDA, I2C_SCL);
-#endif
 
 int sccb_reg_read(uint8_t addr, uint8_t reg, uint8_t *v) {
+#if defined(TARGET_RZ_A2M_EVB) || defined(TARGET_RZ_A2M_EVB_HF) || defined(TARGET_RZ_A2M_SBEV) || defined(TARGET_SEMB1402)
+    I2C i2c_dv(PD_5, PD_4);
+#else
+    I2C i2c_dv(I2C_SDA, I2C_SCL);
+#endif
+    i2c_dv.frequency(150000);
     int ret = 0;
     ret = i2c_dv.write((int)addr, (const char *)&reg, 1);
     if (ret != 0) {
         return ret;
     }
-    ret = i2c_dv.read((int)addr, (char *)v, 1);
+    ret = i2c_dv.read((int)(addr + 1), (char *)v, 1);
     return ret;
 }
 
 int sccb_reg_write(uint8_t addr, uint8_t reg, uint8_t v) {
+#if defined(TARGET_RZ_A2M_EVB) || defined(TARGET_RZ_A2M_EVB_HF) || defined(TARGET_RZ_A2M_SBEV) || defined(TARGET_SEMB1402)
+    I2C i2c_dv(PD_5, PD_4);
+#else
+    I2C i2c_dv(I2C_SDA, I2C_SCL);
+#endif
+    i2c_dv.frequency(150000);
     int ret = 0;
-    ret = i2c_dv.write((int)addr, (const char *)&reg, 1);
-    if (ret != 0) {
-        return ret;
-    }
-    ret = i2c_dv.write((int)addr, (const char *)&v, 1);
+    uint8_t cmd[2];
+    cmd[0] = reg;
+    cmd[1] = v;
+    ret = i2c_dv.write((int)addr, (const char *)&cmd, 2);
     return ret;
 }
 
 int sccb_reg_write_n(uint8_t addr, const uint8_t *tbl, size_t size) {
+#if defined(TARGET_RZ_A2M_EVB) || defined(TARGET_RZ_A2M_EVB_HF) || defined(TARGET_RZ_A2M_SBEV) || defined(TARGET_SEMB1402)
+    I2C i2c_dv(PD_5, PD_4);
+#else
+    I2C i2c_dv(I2C_SDA, I2C_SCL);
+#endif
+    i2c_dv.frequency(150000);
     int ret = 0;
-    for (int i; i < (int)size; i += 2) {
-        ret = i2c_dv.write((int)addr, (const char *)&tbl[i + 0], 1);
-        if (ret != 0) {
-            return ret;
-        }
-        ret = i2c_dv.write((int)addr, (const char *)&tbl[i + 1], 1);
+    for (int i = 0; i < (int)size; i += 2) {
+        ret = i2c_dv.write((int)addr, (const char *)&tbl[i], 2);
         if (ret != 0) {
             return ret;
         }
@@ -68,45 +76,50 @@ int sccb_reg_write_n(uint8_t addr, const uint8_t *tbl, size_t size) {
 }
 
 int sccb2_reg_read(uint8_t addr, uint8_t reg1, uint8_t reg2, uint8_t *v) {
+#if defined(TARGET_RZ_A2M_EVB) || defined(TARGET_RZ_A2M_EVB_HF) || defined(TARGET_RZ_A2M_SBEV) || defined(TARGET_SEMB1402)
+    I2C i2c_dv(PD_5, PD_4);
+#else
+    I2C i2c_dv(I2C_SDA, I2C_SCL);
+#endif
+    i2c_dv.frequency(150000);
     int ret = 0;
-    ret = i2c_dv.write((int)addr, (const char *)&reg1, 1);
+    uint8_t cmd[2];
+    cmd[0] = reg1;
+    cmd[1] = reg2;
+    ret = i2c_dv.write((int)addr, (const char *)&cmd, 2);
     if (ret != 0) {
         return ret;
     }
-    ret = i2c_dv.write((int)addr, (const char *)&reg2, 1);
-    if (ret != 0) {
-        return ret;
-    }
-    ret = i2c_dv.read((int)addr, (char *)v, 1);
+    ret = i2c_dv.read((int)(addr + 1), (char *)v, 1);
     return ret;
 }
 
 int sccb2_reg_write(uint8_t addr, uint8_t reg1, uint8_t reg2, uint8_t v) {
+#if defined(TARGET_RZ_A2M_EVB) || defined(TARGET_RZ_A2M_EVB_HF) || defined(TARGET_RZ_A2M_SBEV) || defined(TARGET_SEMB1402)
+    I2C i2c_dv(PD_5, PD_4);
+#else
+    I2C i2c_dv(I2C_SDA, I2C_SCL);
+#endif
+    i2c_dv.frequency(150000);
     int ret = 0;
-    ret = i2c_dv.write((int)addr, (const char *)&reg1, 1);
-    if (ret != 0) {
-        return ret;
-    }
-    ret = i2c_dv.write((int)addr, (const char *)&reg2, 1);
-    if (ret != 0) {
-        return ret;
-    }
-    ret = i2c_dv.write((int)addr, (const char *)&v, 1);
+    uint8_t cmd[3];
+    cmd[0] = reg1;
+    cmd[1] = reg2;
+    cmd[2] = v;
+    ret = i2c_dv.write((int)addr, (const char *)&cmd, 3);
     return ret;
 }
 
 int sccb2_reg_write_n(uint8_t addr, const uint8_t *tbl, size_t size) {
+#if defined(TARGET_RZ_A2M_EVB) || defined(TARGET_RZ_A2M_EVB_HF) || defined(TARGET_RZ_A2M_SBEV) || defined(TARGET_SEMB1402)
+    I2C i2c_dv(PD_5, PD_4);
+#else
+    I2C i2c_dv(I2C_SDA, I2C_SCL);
+#endif
+    i2c_dv.frequency(150000);
     int ret = 0;
-    for (int i; i < (int)size; i += 3) {
-        ret = i2c_dv.write((int)addr, (const char *)&tbl[i + 0], 1);
-        if (ret != 0) {
-            return ret;
-        }
-        ret = i2c_dv.write((int)addr, (const char *)&tbl[i + 1], 1);
-        if (ret != 0) {
-            return ret;
-        }
-        ret = i2c_dv.write((int)addr, (const char *)&tbl[i + 2], 1);
+    for (int i = 0; i < (int)size; i += 3) {
+        ret = i2c_dv.write((int)addr, (const char *)&tbl[i], 3);
         if (ret != 0) {
             return ret;
         }
