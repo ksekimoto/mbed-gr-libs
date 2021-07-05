@@ -1,58 +1,53 @@
-/*******************************************************************************
+/**********************************************************************************************************************
 * DISCLAIMER
-* This software is supplied by Renesas Electronics Corporation and is only
-* intended for use with Renesas products. No other uses are authorized. This
-* software is owned by Renesas Electronics Corporation and is protected under
-* all applicable laws, including copyright laws.
+* This software is supplied by Renesas Electronics Corporation and is only intended for use with Renesas products. No
+* other uses are authorized. This software is owned by Renesas Electronics Corporation and is protected under all
+* applicable laws, including copyright laws.
 * THIS SOFTWARE IS PROVIDED "AS IS" AND RENESAS MAKES NO WARRANTIES REGARDING
-* THIS SOFTWARE, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING BUT NOT
-* LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE
-* AND NON-INFRINGEMENT. ALL SUCH WARRANTIES ARE EXPRESSLY DISCLAIMED.
-* TO THE MAXIMUM EXTENT PERMITTED NOT PROHIBITED BY LAW, NEITHER RENESAS
-* ELECTRONICS CORPORATION NOR ANY OF ITS AFFILIATED COMPANIES SHALL BE LIABLE
-* FOR ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES FOR
-* ANY REASON RELATED TO THIS SOFTWARE, EVEN IF RENESAS OR ITS AFFILIATES HAVE
-* BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
-* Renesas reserves the right, without notice, to make changes to this software
-* and to discontinue the availability of this software. By using this software,
-* you agree to the additional terms and conditions found by accessing the
+* THIS SOFTWARE, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. ALL SUCH WARRANTIES ARE EXPRESSLY DISCLAIMED. TO THE MAXIMUM
+* EXTENT PERMITTED NOT PROHIBITED BY LAW, NEITHER RENESAS ELECTRONICS CORPORATION NOR ANY OF ITS AFFILIATED COMPANIES
+* SHALL BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES FOR ANY REASON RELATED TO
+* THIS SOFTWARE, EVEN IF RENESAS OR ITS AFFILIATES HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+* Renesas reserves the right, without notice, to make changes to this software and to discontinue the availability of
+* this software. By using this software, you agree to the additional terms and conditions found by accessing the
 * following link:
 * http://www.renesas.com/disclaimer
-*
-* Copyright (C) 2018 Renesas Electronics Corporation. All rights reserved.
-*******************************************************************************/
-/*******************************************************************************
+* Copyright (C) 2019 Renesas Electronics Corporation. All rights reserved.
+**********************************************************************************************************************/
+/**********************************************************************************************************************
 * System Name  : DRP Driver
 * File Name    : r_dk2_if.h
-* Device       : RZ
+* Device       : RZ/A2M
 * Abstract     : Control software of DRP.
 * Tool-Chain   : Renesas e2 studio
-* OS           : Not use
-* H/W Platform : Renesas Starter Kit
+* OS           : None
+* H/W Platform : RZ/A2M Evaluation Board
 * Description  : Interface of DRP Driver.
-* Limitation   : None
-*******************************************************************************/
-/*******************************************************************************
+* Limitation   : R_DK2_Uninitialize and R_DK2_Inactivate are not implemented.
+**********************************************************************************************************************/
+/**********************************************************************************************************************
 * History      : History is managed by Revision Control System.
-*******************************************************************************/
+**********************************************************************************************************************/
 
-#ifndef R_DK2_IF_H
-#define R_DK2_IF_H
-
-/*******************************************************************************
+/**********************************************************************************************************************
 Includes <System Includes> , "Project Includes"
-*******************************************************************************/
+**********************************************************************************************************************/
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/*******************************************************************************
+/**********************************************************************************************************************
 Macro definitions
-*******************************************************************************/
+**********************************************************************************************************************/
+#ifndef R_DK2_IF_H
+#define R_DK2_IF_H
+
+#ifdef  __cplusplus
+extern  "C"
+{
+#endif  /* __cplusplus */
+
 #define R_DK2_SUCCESS                   (0)
 #define R_DK2_ERR_ARG                   (-1)
 #define R_DK2_ERR_FORMAT                (-2)
@@ -238,9 +233,9 @@ Macro definitions
     const uint32_t g_sizeof_##name = (uint32_t)&g_label_sizeof_##name;
 #endif
 
-/*******************************************************************************
+/**********************************************************************************************************************
 Typedef definitions
-*******************************************************************************/
+**********************************************************************************************************************/
 typedef void (*load_cb_t)(uint8_t id);
 typedef void (*int_cb_t)(uint8_t id);
 typedef struct config_info_st
@@ -251,22 +246,37 @@ typedef struct config_info_st
     uint32_t cid;
 } config_info_t;
 
-/*******************************************************************************
+/**********************************************************************************************************************
 Public Functions
-*******************************************************************************/
+**********************************************************************************************************************/
+/* Function Name: R_DK2_Initialize */
 int32_t R_DK2_Initialize(void);
+/* Function Name: R_DK2_Uninitialize */
 int32_t R_DK2_Uninitialize(void);
-int32_t R_DK2_Load(const void *const pconfig, const uint8_t top_tiles, const uint32_t tile_pattern, const load_cb_t pload, const int_cb_t pint, uint8_t *const paid);
+/* Function Name: R_DK2_Load */
+int32_t R_DK2_Load(const void *const pconfig, const uint8_t top_tiles, const uint32_t tile_pattern,
+    const load_cb_t pload, const int_cb_t pint, uint8_t *const paid);
+/* Function Name: R_DK2_Unload */
 int32_t R_DK2_Unload(const uint8_t id, uint8_t *const paid);
+/* Function Name: R_DK2_Activate */
 int32_t R_DK2_Activate(const uint8_t id, const uint32_t freq);
+/* Function Name: R_DK2_Inactivate */
 int32_t R_DK2_Inactivate(const uint8_t id);
+/* Function Name: R_DK2_Start */
+#ifdef R_DK2_ENABLE_INTN
+int32_t R_DK2_Start(const uint8_t id, const void *const pparam, const uint32_t size, const uint8_t intn);
+#else
 int32_t R_DK2_Start(const uint8_t id, const void *const pparam, const uint32_t size);
+#endif
+/* Function Name: R_DK2_GetStatus */
 int32_t R_DK2_GetStatus(const uint8_t id);
+/* Function Name: R_DK2_GetInfo */
 int32_t R_DK2_GetInfo(const void *const pconfig, config_info_t *const pinfo, const bool crc_check);
+/* Function Name: R_DK2_GetVersion */
 uint32_t R_DK2_GetVersion(void);
 
-#ifdef __cplusplus
+#ifdef  __cplusplus
 }
-#endif
+#endif  /* __cplusplus */
 
 #endif /* R_DK2_IF_H */

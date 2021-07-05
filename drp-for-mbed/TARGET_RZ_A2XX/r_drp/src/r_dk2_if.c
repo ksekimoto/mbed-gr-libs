@@ -1,43 +1,37 @@
-/*******************************************************************************
+/**********************************************************************************************************************
 * DISCLAIMER
-* This software is supplied by Renesas Electronics Corporation and is only
-* intended for use with Renesas products. No other uses are authorized. This
-* software is owned by Renesas Electronics Corporation and is protected under
-* all applicable laws, including copyright laws.
+* This software is supplied by Renesas Electronics Corporation and is only intended for use with Renesas products. No
+* other uses are authorized. This software is owned by Renesas Electronics Corporation and is protected under all
+* applicable laws, including copyright laws.
 * THIS SOFTWARE IS PROVIDED "AS IS" AND RENESAS MAKES NO WARRANTIES REGARDING
-* THIS SOFTWARE, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING BUT NOT
-* LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE
-* AND NON-INFRINGEMENT. ALL SUCH WARRANTIES ARE EXPRESSLY DISCLAIMED.
-* TO THE MAXIMUM EXTENT PERMITTED NOT PROHIBITED BY LAW, NEITHER RENESAS
-* ELECTRONICS CORPORATION NOR ANY OF ITS AFFILIATED COMPANIES SHALL BE LIABLE
-* FOR ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES FOR
-* ANY REASON RELATED TO THIS SOFTWARE, EVEN IF RENESAS OR ITS AFFILIATES HAVE
-* BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
-* Renesas reserves the right, without notice, to make changes to this software
-* and to discontinue the availability of this software. By using this software,
-* you agree to the additional terms and conditions found by accessing the
+* THIS SOFTWARE, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. ALL SUCH WARRANTIES ARE EXPRESSLY DISCLAIMED. TO THE MAXIMUM
+* EXTENT PERMITTED NOT PROHIBITED BY LAW, NEITHER RENESAS ELECTRONICS CORPORATION NOR ANY OF ITS AFFILIATED COMPANIES
+* SHALL BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES FOR ANY REASON RELATED TO
+* THIS SOFTWARE, EVEN IF RENESAS OR ITS AFFILIATES HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+* Renesas reserves the right, without notice, to make changes to this software and to discontinue the availability of
+* this software. By using this software, you agree to the additional terms and conditions found by accessing the
 * following link:
 * http://www.renesas.com/disclaimer
-*
-* Copyright (C) 2018 Renesas Electronics Corporation. All rights reserved.
-*******************************************************************************/
-/*******************************************************************************
+* Copyright (C) 2020 Renesas Electronics Corporation. All rights reserved.
+**********************************************************************************************************************/
+/**********************************************************************************************************************
 * System Name  : DRP Driver
 * File Name    : r_dk2_if.c
-* Device       : RZ
+* Device       : RZ/A2M
 * Abstract     : Control software of DRP.
-* Tool-Chain   : Renesas e2studio
-* OS           : Not use
-* H/W Platform : Renesas Starter Kit
+* Tool-Chain   : Renesas e2 studio
+* OS           : None
+* H/W Platform : RZ/A2M Evaluation Board
 * Description  : Interface of DRP Driver.
-* Limitation   : None
-*******************************************************************************/
-/*******************************************************************************
+* Limitation   : R_DK2_Uninitialize and R_DK2_Inactivate are not implemented.
+**********************************************************************************************************************/
+/**********************************************************************************************************************
 * History      : History is managed by Revision Control System.
-*******************************************************************************/
-/*******************************************************************************
+**********************************************************************************************************************/
+/**********************************************************************************************************************
 Includes <System Includes> , "Project Includes"
-*******************************************************************************/
+**********************************************************************************************************************/
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -58,9 +52,10 @@ Includes <System Includes> , "Project Includes"
 #include "r_dk2_core.h"
 #include "r_dk2_if.h"
 
-/*******************************************************************************
+/**********************************************************************************************************************
 Macro definitions
-*******************************************************************************/
+**********************************************************************************************************************/
+#define R_DK2_VAR_MAX_INT
 #define USE_UNCACHE_AREA
 
 #define STATUS_UNINITIALIZED    (0)
@@ -74,7 +69,9 @@ Macro definitions
 #define ROUND_UP_DIV(x, y)      (((x) + (y) - 1) / (y))
 
 /* for config_parser */
+#define CONFIG_ALIGN            (32)
 #define CONFIG_ALIGN_MASK       (0x1F)
+#define SECTION_SIZE_LEN        (4)
 #define SECTION_ID_LEN          (4)
 #define COMMON_SECTION_ID       ("dk2c")
 #define STP_SECTION_ID          ("stpd")
@@ -85,6 +82,13 @@ Macro definitions
 #define COMMON_RESERVE_LEN      (25)
 #define CONTEXT_MAX             (64)
 #define STATE_MAX               (256)
+#define SECTION_NAME_LEN        (32)
+#define NAME_BUF_SIZE           (SECTION_NAME_LEN + 1)
+#define U64_DATA_SIZE           (8)
+#define SECTION_CRC_LEN         (4)
+#define SECTION_DII_LEN         (32)
+#define INT_STATUS_SHIFT        (16)
+#define INT_CH_MASK             (0x3F)
 
 /* for CRC */
 #define CRC32_GEN_POLYNOMIAL    (0xEDB88320u)
@@ -94,24 +98,47 @@ Macro definitions
 
 #define MUTEX_WAIT              (100)
 
-/*******************************************************************************
+/**********************************************************************************************************************
 Typedef definitions
-*******************************************************************************/
+**********************************************************************************************************************/
 typedef char dk2_char_t;
 
-/*******************************************************************************
-Imported global variables and functions (from other files)
-*******************************************************************************/
+typedef struct config_parser_info_st
+{
+    uint8_t *p_config;
+    uint32_t index;
+    uint32_t section_index;
+    uint32_t section_size;
+} config_parser_info_t;
 
-/*******************************************************************************
+typedef struct config_dat_info_st
+{
+    uint32_t *p_array;
+    uint32_t array_num;
+    uint32_t cid;
+    uint16_t minor_ver;
+    uint8_t tile_num;
+    uint32_t freq;
+    uint8_t del_zero;
+    uint8_t dfc;
+    uint16_t context;
+    uint16_t state;
+} config_dat_info_t;
+
+/**********************************************************************************************************************
+Imported global variables and functions (from other files)
+**********************************************************************************************************************/
+
+/**********************************************************************************************************************
 Private variables and functions(prototypes)
-*******************************************************************************/
+**********************************************************************************************************************/
 static uint8_t status = STATUS_UNINITIALIZED;
 static uint8_t aid[R_DK2_TILE_NUM];
 static uint8_t adfc[R_DK2_TILE_NUM];
 static uint32_t amax[R_DK2_TILE_NUM];
 static uint32_t afreq[R_DK2_TILE_NUM];
 static uint8_t astart[R_DK2_TILE_NUM];
+static uint8_t acount[R_DK2_TILE_NUM]; /* Count of interrupt */
 static load_cb_t apload[R_DK2_TILE_NUM];
 static int_cb_t apint[R_DK2_TILE_NUM];
 #if(1) /* for mbed */
@@ -140,29 +167,13 @@ __attribute__ ((aligned(16)))
 static uint8_t work_start[R_DK2_TILE_NUM][32];
 #endif
 
-/* for conf_parser */
-static const uint8_t *pu8config;
-static uint32_t config_index;
-static uint32_t section_index;
-static uint32_t section_size;
-
-/* conf_parser result */
-static uint64_t *pu64config;
-static uint32_t u64config_num;
-static uint16_t minor_ver_dat;
-static uint8_t tile_num_dat;
-static uint32_t freq_dat;
-static uint8_t del_zero_dat;
-static uint8_t dfc_dat;
-static uint16_t context_dat;
-static uint16_t state_dat;
-
 #if(1) /* for mbed */
 static osSemaphoreId_t sem_hdl;
 osSemaphoreDef(drp_sem_01);
 #else
 static p_mutex_t mutex_hdl;
 #endif
+static dk2_char_t name_buf[NAME_BUF_SIZE];
 
 static const uint32_t apattern[TILE_PATTERN_NUM] = 
 {
@@ -209,33 +220,44 @@ static const uint8_t atail[TILE_PATTERN_NUM] =
 
 /* Prototypes */
 static int32_t get_tile_index(const uint8_t id);
+#if defined(R_DK2_VAR_MAX_INT) || defined(R_DK2_ENABLE_INTN)
+static int32_t get_tile_num(const uint8_t id);
+#endif
 static int32_t get_status(const uint8_t id);
-static int32_t analyze_config(const void *const pconfig);
-static int32_t init_config_parser(const void *const pconfig);
-static int32_t analyze_common_section(void);
-static int32_t analyze_stp_section(void);
-static int32_t read_config_section(const dk2_char_t *const pid);
-static int32_t read_config_word(uint32_t *const pword, const uint32_t *const pexpected);
-static int32_t read_config_hword(uint16_t *const phword, const uint16_t *const pexpected);
-static int32_t read_config_byte(uint8_t *const pbyte, const uint8_t *const pexpected);
-static int32_t read_config_str(const dk2_char_t *const pexpeced, const uint32_t size);
-static int32_t read_config_data(const uint32_t **const pdata, const uint32_t size);
+static int32_t analyze_config(const void *const pconfig, const bool crc_check, dk2_char_t *const pname,
+    config_dat_info_t *const presult);
+static int32_t analyze_common_section(const bool crc_check, config_parser_info_t *const pinfo,
+    config_dat_info_t *const presult);
+static int32_t analyze_stp_section(dk2_char_t *const pname, const bool crc_check, config_parser_info_t *const pinfo,
+    config_dat_info_t *const presult);
+static int32_t init_config_parser(const void *const pconfig, config_parser_info_t *const pinfo);
+static int32_t read_config_section(const dk2_char_t *const pid, config_parser_info_t *const pinfo);
+static int32_t read_config_word(uint32_t *const pword, const uint32_t *const pexpected,
+    config_parser_info_t *const pinfo);
+static int32_t read_config_hword(uint16_t *const phword, const uint16_t *const pexpected,
+    config_parser_info_t *const pinfo);
+static int32_t read_config_byte(uint8_t *const pbyte, const uint8_t *const pexpected,
+    config_parser_info_t *const pinfo);
+static int32_t read_config_str(dk2_char_t *const pstr, const dk2_char_t *const pexpeced, const uint32_t size,
+    config_parser_info_t *const pinfo);
+static int32_t read_config_data(const uint32_t **const pdata, const uint32_t size, config_parser_info_t *const pinfo);
+static uint32_t calc_crc(const uint8_t *const buf, const uint32_t len);
 #if(1) /* for mbed */
 static void dk2_nmlint_isr(void);
 #else
 static void dk2_nmlint_isr(uint32_t int_sense);
 #endif
 
-/*******************************************************************************
+/**********************************************************************************************************************
 Exported global variables and functions (to be accessed by other files)
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: R_DK2_Initialize
 * Description  : This function causes DRP to be initialized.
 * Arguments    : None.
 * Return Value : Error code.
-*******************************************************************************/
+**********************************************************************************************************************/
 int32_t R_DK2_Initialize(void)
 {
     int32_t result = R_DK2_SUCCESS;
@@ -256,6 +278,7 @@ int32_t R_DK2_Initialize(void)
         amax[tile_index] = MAX_FREQ;
         afreq[tile_index] = INVALID_FREQ;
         astart[tile_index] = 0;
+        acount[tile_index] = 0;
         apload[tile_index] = NULL;
         apint[tile_index] = NULL;
     }
@@ -312,26 +335,26 @@ int32_t R_DK2_Initialize(void)
 func_end:
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function R_DK2_Initialize
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: R_DK2_Uninitialize
 * Description  : This function causes DRP to be uninitialized.
 * Arguments    : None.
 * Return Value : Error code.
-*******************************************************************************/
+**********************************************************************************************************************/
 int32_t R_DK2_Uninitialize(void)
 {
     /* Future planned implementation */
     return R_DK2_ERR_INTERNAL;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function R_DK2_Uninitialize
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: R_DK2_Load
 * Description  : This function loads DRP circuit to DRP.
 * Arguments    : pconfig - Address of configuration data.
@@ -341,8 +364,9 @@ End of function R_DK2_Uninitialize
                  pint - Callback function to notify interrupt from DRP circuit.
                  pid - Array represents tile layout of DRP circuit.
 * Return Value : Error code.
-*******************************************************************************/
-int32_t R_DK2_Load(const void *const pconfig, const uint8_t top_tiles, const uint32_t tile_pattern, const load_cb_t pload, const int_cb_t pint, uint8_t *const paid)
+**********************************************************************************************************************/
+int32_t R_DK2_Load(const void *const pconfig, const uint8_t top_tiles, const uint32_t tile_pattern,
+    const load_cb_t pload, const int_cb_t pint, uint8_t *const paid)
 {
     int32_t result;
     uint8_t bottom_tiles;
@@ -355,12 +379,15 @@ int32_t R_DK2_Load(const void *const pconfig, const uint8_t top_tiles, const uin
     uint8_t loaded_id[R_DK2_TILE_NUM];
     int32_t loaded_id_index;
 #if(1) /* for mbed */
-    osStatus sem_result;
+    osStatus sem_result = osStatusReserved;
     uint32_t sem_timeout = MUTEX_WAIT;
 #else
-    bool mutex_result;
+    bool mutex_result = false;
 #endif
-    
+    uint32_t freq_khz;
+    bool del_zero;
+    config_dat_info_t analyze_result;
+
     /* Check status of DRP Driver */
     if (status == STATUS_UNINITIALIZED)
     {
@@ -392,7 +419,7 @@ int32_t R_DK2_Load(const void *const pconfig, const uint8_t top_tiles, const uin
         }
     }
     
-    if ((NULL == pconfig) || (0 != ((uint32_t)pconfig & 0x0000001F)) || (0 == top_tiles) || (0 != (top_tiles & ~0x3F)))
+    if ((NULL == pconfig) || (0 != ((uint32_t)pconfig & 0x0000001F)) || (0 == top_tiles) || (0 != (top_tiles & (~0x3F))))
     {
         result = R_DK2_ERR_ARG;
         goto func_end;
@@ -406,30 +433,14 @@ int32_t R_DK2_Load(const void *const pconfig, const uint8_t top_tiles, const uin
     }
     
     /* analyze configuration data */
-    pu64config = NULL;
-    u64config_num = 0;
-    minor_ver_dat = 0;
-    tile_num_dat = 0;
-    freq_dat = 0;
-    del_zero_dat = 0;
-    dfc_dat = 0;
-    context_dat = 0;
-    state_dat = 0;
-    result = analyze_config(pconfig);
+    result = analyze_config(pconfig, false, NULL, &analyze_result);
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    if ((NULL == pu64config) || (0 == u64config_num) ||
-        (0 == tile_num_dat) || (tile_num_dat > R_DK2_TILE_NUM) ||
-        (del_zero_dat > 1) || (dfc_dat > 1) || (context_dat > CONTEXT_MAX) || (state_dat > STATE_MAX))
-    {
-        result = R_DK2_ERR_FORMAT;
-        goto func_end;
-    }
     
     /* check tile pattern */
-    bottom_tiles = (uint8_t)(top_tiles << (tile_num_dat - 1));
+    bottom_tiles = (uint8_t)(top_tiles << (analyze_result.tile_num - 1));
     for (index = 0; index < TILE_PATTERN_NUM; index++)
     {
         if (tile_pattern == apattern[index])
@@ -489,8 +500,12 @@ int32_t R_DK2_Load(const void *const pconfig, const uint8_t top_tiles, const uin
             }
             tile_config = tile_index;
         }
+        else
+        {
+            /* DO NOTHING */
+        }
         tile_config++;
-        if (tile_config >= tile_pos + tile_num_dat)
+        if (tile_config >= (tile_pos + analyze_result.tile_num))
         {
             tile_config = R_DK2_TILE_NUM;
         }
@@ -498,6 +513,10 @@ int32_t R_DK2_Load(const void *const pconfig, const uint8_t top_tiles, const uin
         {
             result = R_DK2_ERR_OVERWRITE;
             goto func_end;
+        }
+        else
+        {
+            /* DO NOTHING */
         }
     }
     
@@ -511,15 +530,18 @@ int32_t R_DK2_Load(const void *const pconfig, const uint8_t top_tiles, const uin
     {
         uint32_t paddr;
 
-        R_MMU_VAtoPA((uint32_t)pu64config, &paddr);
-        result = R_DK2_CORE_PreLoad(tile_num_dat, top_tiles, paddr, u64config_num * 8, (0 != del_zero_dat), context_dat, state_dat, work_uc, &id);
+        del_zero = (0 != analyze_result.del_zero) ? true : false;
+
+        R_MMU_VAtoPA((uint32_t)analyze_result.p_array, &paddr);
+        result = R_DK2_CORE_PreLoad(analyze_result.tile_num, top_tiles, paddr, analyze_result.array_num * 8, del_zero,
+            analyze_result.context, analyze_result.state, work_uc, &id);
         if (R_DK2_SUCCESS != result)
         {
             goto func_end;
         }
     
         R_MMU_VAtoPA((uint32_t)&work_load[tile_pos][0], &paddr);
-        result = R_DK2_CORE_Load(id, top_tiles, tile_pattern, state_dat, paddr, &loaded_id[0]);
+        result = R_DK2_CORE_Load(id, top_tiles, tile_pattern, analyze_result.state, paddr, &loaded_id[0]);
         if (R_DK2_SUCCESS != result)
         {
             goto func_end;
@@ -529,21 +551,21 @@ int32_t R_DK2_Load(const void *const pconfig, const uint8_t top_tiles, const uin
     /* write paid after loading */
     loaded_id_index = 0;
     tile_pos = R_DK2_TILE_NUM;
-    if ((1 <= minor_ver_dat) && (0 != freq_dat))
+    if ((1 <= analyze_result.minor_ver) && (0 != analyze_result.freq))
     {
-        freq_dat = 1000000000 / freq_dat;
+        freq_khz = 1000000000 / analyze_result.freq;
     }
     else
     {
-        freq_dat = MAX_FREQ;
+        freq_khz = MAX_FREQ;
     }
     for (tile_index = 0; tile_index < R_DK2_TILE_NUM; tile_index++)
     {
-        if ((tile_pos < R_DK2_TILE_NUM) && (tile_index - tile_pos < tile_num_dat))
+        if ((tile_pos < R_DK2_TILE_NUM) && ((tile_index - tile_pos) < analyze_result.tile_num))
         {
             aid[tile_index] = aid[tile_index - 1];
-            adfc[tile_index] = dfc_dat;
-            amax[tile_index] = freq_dat;
+            adfc[tile_index] = analyze_result.dfc;
+            amax[tile_index] = freq_khz;
             if (NULL != pload)
             {
                 apload[tile_index] = pload;
@@ -561,8 +583,8 @@ int32_t R_DK2_Load(const void *const pconfig, const uint8_t top_tiles, const uin
         {
             tile_pos = tile_index;
             aid[tile_index] = loaded_id[loaded_id_index++];
-            adfc[tile_index] = dfc_dat;
-            amax[tile_index] = freq_dat;
+            adfc[tile_index] = analyze_result.dfc;
+            amax[tile_index] = freq_khz;
             if (NULL != pload)
             {
                 apload[tile_index] = pload;
@@ -575,6 +597,10 @@ int32_t R_DK2_Load(const void *const pconfig, const uint8_t top_tiles, const uin
             {
                 paid[tile_index] = aid[tile_index];
             }
+        }
+        else
+        {
+            /* DO NOTHING */
         }
     }
 
@@ -596,7 +622,8 @@ func_end:
 #ifdef DRP_DEBUG
     if (result < 0)
     {
-        printf("R_DK2_Load = %d: pconfig = %08Xh, top_tiles = %02X, tile_pattern = %02X\n  id =", result, (uint32_t)pconfig, top_tiles, tile_pattern);
+        printf("R_DK2_Load = %d: pconfig = %08Xh, top_tiles = %02X, tile_pattern = %02X\n  id =", result,
+                                                                        (uint32_t)pconfig, top_tiles, tile_pattern);
         for (tile_index = 0; tile_index < R_DK2_TILE_NUM; tile_index++)
         {
             printf(" %02X", paid[tile_index]);
@@ -607,26 +634,26 @@ func_end:
 
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function R_DK2_Load
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: R_DK2_Unload
 * Description  : This function unloads DRP circuit from DRP.
 * Arguments    : id - ID of DRP circuit to be unloaded.
                  pid - Array represents tile layout of DRP circuits.
 * Return Value : Error code.
-*******************************************************************************/
+**********************************************************************************************************************/
 int32_t R_DK2_Unload(const uint8_t id, uint8_t *const paid)
 {
-    int32_t result;
+    int32_t result = R_DK2_SUCCESS;
     int32_t tile_index;
 #if(1) /* for mbed */
-    osStatus sem_result;
+    osStatus sem_result = osStatusReserved;
     uint32_t sem_timeout = MUTEX_WAIT;
 #else
-    bool mutex_result;
+    bool mutex_result = false;
 #endif
     int32_t id_index;
     int32_t id_num;
@@ -684,6 +711,10 @@ int32_t R_DK2_Unload(const uint8_t id, uint8_t *const paid)
                     aid_target[id_num] = aid[tile_index];
                     id_num++;
                 }
+                else
+                {
+                    /* DO NOTHING */
+                }
             }
         }
         
@@ -712,11 +743,19 @@ int32_t R_DK2_Unload(const uint8_t id, uint8_t *const paid)
                     aid_target[id_num] = aid[tile_index];
                     id_num++;
                 }
+                else
+                {
+                    /* DO NOTHING */
+                }
             }
             else if ((id & aid[tile_index]) != 0)
             {
                 result = R_DK2_ERR_ARG;
                 goto func_end;
+            }
+            else
+            {
+                /* DO NOTHING */
             }
         }
         
@@ -758,6 +797,7 @@ int32_t R_DK2_Unload(const uint8_t id, uint8_t *const paid)
                 amax[tile_index] = MAX_FREQ;
                 afreq[tile_index] = INVALID_FREQ;
                 astart[tile_index] = 0;
+                acount[tile_index] = 0;
                 apload[tile_index] = NULL;
                 apint[tile_index] = NULL;
                 if (NULL != paid)
@@ -799,27 +839,27 @@ func_end:
 
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function R_DK2_Unload
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: R_DK2_Activate
 * Description  : This function activates and set up DRP circuit loaded in DRP.
 * Arguments    : id - ID of DRP circuit to be started.
                  freq - Frequency of DRP circuit to be started.
 * Return Value : Error code.
-*******************************************************************************/
+**********************************************************************************************************************/
 int32_t R_DK2_Activate(const uint8_t id, const uint32_t freq)
 {
-    int32_t result;
+    int32_t result = R_DK2_SUCCESS;
     int32_t tile_index;
     uint8_t div;
 #if(1) /* for mbed */
-    osStatus sem_result;
+    osStatus sem_result = osStatusReserved;
     uint32_t sem_timeout = MUTEX_WAIT;
 #else
-    bool mutex_result;
+    bool mutex_result = false;
 #endif
     int32_t id_index;
     int32_t id_num;
@@ -871,6 +911,10 @@ int32_t R_DK2_Activate(const uint8_t id, const uint32_t freq)
                     aindex_target[id_num] = tile_index;
                     id_num++;
                 }
+                else
+                {
+                    /* DO NOTHING */
+                }
             }
         }
         
@@ -901,11 +945,19 @@ int32_t R_DK2_Activate(const uint8_t id, const uint32_t freq)
                     aindex_target[id_num] = tile_index;
                     id_num++;
                 }
+                else
+                {
+                    /* DO NOTHING */
+                }
             }
             else if ((id & aid[tile_index]) != 0)
             {
                 result = R_DK2_ERR_ARG;
                 goto func_end;
+            }
+            else
+            {
+                /* DO NOTHING */
             }
         }
         
@@ -1027,45 +1079,54 @@ func_end:
 
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function R_DK2_Activate
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: R_DK2_Inactivate
 * Description  : This function inactivates DRP circuit loaded in DRP.
 * Arguments    : id - ID of DRP circuit to be started.
 * Return Value : Error code.
-*******************************************************************************/
+**********************************************************************************************************************/
 int32_t R_DK2_Inactivate(const uint8_t id)
 {
     /* Future planned implementation */
     return R_DK2_ERR_INTERNAL;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function R_DK2_Inactivate
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: R_DK2_Start
 * Description  : This function starts DRP circuit loaded in DRP.
 * Arguments    : id - ID of DRP circuit.
                  pparam - Address of parameters.
                  size - Size of parameters.
+                 intn - Number of interrupts.
 * Return Value : Error code.
-*******************************************************************************/
+**********************************************************************************************************************/
+#ifdef R_DK2_ENABLE_INTN
+int32_t R_DK2_Start(const uint8_t id, const void *const pparam, const uint32_t size, const uint8_t intn)
+#else
 int32_t R_DK2_Start(const uint8_t id, const void *const pparam, const uint32_t size)
+#endif
 {
     int32_t result;
     int32_t circuit_status;
     int32_t tile_index;
     int32_t tile_pos;
+#if defined(R_DK2_VAR_MAX_INT) || defined(R_DK2_ENABLE_INTN)
+    int32_t tile_num;
+#endif
+    uint8_t max_int;
     void *work_uc;
 #if(1) /* for mbed */
     osStatus sem_result;
     uint32_t sem_timeout = MUTEX_WAIT;
 #else
-    bool mutex_result;
+    bool mutex_result = false;
 #endif
     
     /* Check status of DRP Driver */
@@ -1115,6 +1176,69 @@ int32_t R_DK2_Start(const uint8_t id, const void *const pparam, const uint32_t s
         goto func_end;
     }
     
+#if defined(R_DK2_VAR_MAX_INT) && !defined(R_DK2_ENABLE_INTN)
+    tile_num = get_tile_num(id);
+    if ((tile_num == 0) || (tile_num > R_DK2_TILE_NUM))
+    {
+        result = R_DK2_ERR_ARG;
+        goto func_end;
+    }
+    
+    if (tile_num == 1)
+    {
+        max_int = 1;
+    }
+    else if (tile_num == 6)
+    {
+        max_int = 4;
+    }
+    else /* tile_num = 2, 3, 4, 5 */
+    {
+        max_int = 2;
+    }
+#elif defined(R_DK2_ENABLE_INTN)
+    max_int = intn;
+    if (max_int == 0)
+    {
+        result = R_DK2_ERR_ARG;
+        goto func_end;
+    }
+
+    tile_num = get_tile_num(id);
+    if ((tile_num == 0) || (tile_num > R_DK2_TILE_NUM))
+    {
+        result = R_DK2_ERR_ARG;
+        goto func_end;
+    }
+
+    if (tile_num == 1)
+    {
+        if (max_int > 1)
+        {
+            result = R_DK2_ERR_ARG;
+            goto func_end;
+        }
+    }
+    else if (tile_num == 6)
+    {
+        if (max_int > 4)
+        {
+            result = R_DK2_ERR_ARG;
+            goto func_end;
+        }
+    }
+    else /* tile_num = 2, 3, 4, 5 */
+    {
+        if (max_int > 2)
+        {
+            result = R_DK2_ERR_ARG;
+            goto func_end;
+        }
+    }
+#else
+    max_int = 1;
+#endif
+    
 #ifdef USE_UNCACHE_AREA
     work_uc = (void *)&work_start[tile_pos][0];
 #else
@@ -1136,6 +1260,7 @@ int32_t R_DK2_Start(const uint8_t id, const void *const pparam, const uint32_t s
         if (id == aid[tile_index])
         {
             astart[tile_index] = id;
+            acount[tile_index] = max_int;
         }
     }
     
@@ -1151,6 +1276,7 @@ int32_t R_DK2_Start(const uint8_t id, const void *const pparam, const uint32_t s
                 if (id == aid[tile_index])
                 {
                     astart[tile_index] = 0;
+                    acount[tile_index] = 0;
                 }
             }
             goto func_end;
@@ -1179,16 +1305,16 @@ func_end:
 
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function R_DK2_Start
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: R_DK2_GetStatus
 * Description  : This function gets status of DRP circuit loaded in DRP.
 * Arguments    : id - ID of DRP circuit.
 * Return Value : Error code.
-*******************************************************************************/
+**********************************************************************************************************************/
 int32_t R_DK2_GetStatus(const uint8_t id)
 {
     int32_t result;
@@ -1196,7 +1322,7 @@ int32_t R_DK2_GetStatus(const uint8_t id)
     osStatus sem_result;
     uint32_t sem_timeout = MUTEX_WAIT;
 #else
-    bool mutex_result;
+    bool mutex_result = false;
 #endif
     
     /* Check status of DRP Driver */
@@ -1240,51 +1366,88 @@ func_end:
     
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function R_DK2_GetStatus
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: R_DK2_GetInfo
 * Description  : This function gets infomation of DRP configuration data.
 * Arguments    : pconfig - Address of DRP configuration data.
                  pinfo - Address of infomation of DRP configuration data.
                  crc_check - Whether or not to check CRC.
 * Return Value : Error code.
-*******************************************************************************/
+**********************************************************************************************************************/
 int32_t R_DK2_GetInfo(const void *const pconfig, config_info_t *const pinfo, const bool crc_check)
 {
-    /* Future planned implementation */
-    return R_DK2_ERR_INTERNAL;
-}
-/*******************************************************************************
-End of function R_DK2_GetInfo
-*******************************************************************************/
+    int32_t result = R_DK2_SUCCESS;
+    uint32_t index;
+    uint32_t ver;
+    uint32_t *p_data;
+    uint32_t data0;
+    uint32_t data1;
+    config_dat_info_t analyze_result;
 
-/*******************************************************************************
+    if ((NULL == pconfig) || (NULL == pinfo))
+    {
+        result = R_DK2_ERR_ARG;
+        goto func_end;
+    }
+
+    result = analyze_config(pconfig, crc_check, &name_buf[0], &analyze_result);
+    if (R_DK2_SUCCESS != result)
+    {
+        goto func_end;
+    }
+
+    ver = 0;
+    p_data = analyze_result.p_array;
+    for (index = 0; index < analyze_result.array_num; index++)
+    {
+        data0 = *p_data++;
+        data1 = *p_data++;
+        if (data1 == 0xF01D2300)
+        {
+            ver = data0;
+        }
+    }
+
+    pinfo->type = 0;
+    pinfo->pname = &name_buf[0];
+    pinfo->cid = analyze_result.cid;
+    pinfo->ver = ver;
+
+func_end:
+    return result;
+}
+/**********************************************************************************************************************
+End of function R_DK2_GetInfo
+**********************************************************************************************************************/
+
+/**********************************************************************************************************************
 * Function Name: R_DK2_GetVersion
 * Description  : This function gets version of DRP driver.
 * Arguments    : None.
 * Return Value : Version of DRP driver.
-*******************************************************************************/
+**********************************************************************************************************************/
 uint32_t R_DK2_GetVersion(void)
 {
     return R_DK2_CORE_GetVersion();
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function R_DK2_GetVersion
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 Private functions
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: get_tile_index
 * Description  : This function gets index of DRP circuit.
 * Arguments    : id - ID of circuit.
 * Return Value : Index of DRP circuit.
-*******************************************************************************/
+**********************************************************************************************************************/
 static int32_t get_tile_index(const uint8_t id)
 {
     int32_t tile_index;
@@ -1299,16 +1462,44 @@ static int32_t get_tile_index(const uint8_t id)
 
     return tile_index;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function get_tile_index
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+#if defined(R_DK2_VAR_MAX_INT) || defined(R_DK2_ENABLE_INTN)
+/**********************************************************************************************************************
+* Function Name: get_tile_num
+* Description  : This function gets number of DRP tiles.
+* Arguments    : id - ID of circuit.
+* Return Value : Number of DRP tiles.
+**********************************************************************************************************************/
+static int32_t get_tile_num(const uint8_t id)
+{
+    int32_t tile_index;
+    int32_t tile_num;
+
+    tile_num = 0;
+    for (tile_index = 0; tile_index < R_DK2_TILE_NUM; tile_index++)
+    {
+        if (aid[tile_index] == id)
+        {
+            tile_num++;
+        }
+    }
+
+    return tile_num;
+}
+/**********************************************************************************************************************
+End of function get_tile_num
+**********************************************************************************************************************/
+#endif /* R_DK2_VAR_MAX_INT || R_DK2_ENABLE_INTN */
+
+/**********************************************************************************************************************
 * Function Name: get_status
 * Description  : This function gets status of DRP circuit.
 * Arguments    : id - ID of circuit.
 * Return Value : Status of DRP circuit.
-*******************************************************************************/
+**********************************************************************************************************************/
 static int32_t get_status(const uint8_t id)
 {
     int32_t result;
@@ -1335,35 +1526,75 @@ static int32_t get_status(const uint8_t id)
     
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function get_status
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: analyze_config
 * Description  : This function stops DRP circuit loaded in DRP.
 * Arguments    : pconf - Address of configuration data.
+*                crc_check - Whether or not to check CRC.
+*                pname - Address of name buffer.
+*                presult - Result of analysis.
 * Return Value : Error code.
-*******************************************************************************/
-static int32_t analyze_config(const void *const pconfig)
+**********************************************************************************************************************/
+static int32_t analyze_config(
+    const void *const pconfig, const bool crc_check, dk2_char_t *const pname, config_dat_info_t *const presult)
 {
     int32_t result = R_DK2_SUCCESS;
+    config_parser_info_t parser_info;
+    int32_t index;
+
+    if (NULL == presult)
+    {
+        result = R_DK2_ERR_INTERNAL;
+        goto func_end;
+    }
+
+    presult->p_array = NULL;
+    presult->array_num = 0;
+    presult->cid = 0;
+    presult->minor_ver = 0;
+    presult->tile_num = 0;
+    presult->freq = 0;
+    presult->del_zero = 0;
+    presult->dfc = 0;
+    presult->context = 0;
+    presult->state = 0;
+
+    if (NULL != pname)
+    {
+        for (index = 0; index < NAME_BUF_SIZE; index++)
+        {
+            pname[index] = 0;
+        }
+    }
     
-    result = init_config_parser(pconfig);
+    result = init_config_parser(pconfig, &parser_info);
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
     
-    result = analyze_common_section();
+    result = analyze_common_section(crc_check, &parser_info, presult);
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
     
-    result = analyze_stp_section();
+    result = analyze_stp_section(pname, crc_check, &parser_info, presult);
     if (R_DK2_SUCCESS != result)
     {
+        goto func_end;
+    }
+
+    if ((NULL == presult->p_array) || (0 == presult->array_num) ||
+        (0 == presult->tile_num) || (presult->tile_num > R_DK2_TILE_NUM) ||
+        (presult->del_zero > 1) || (presult->dfc > 1) ||
+        (presult->context > CONTEXT_MAX) || (presult->state > STATE_MAX))
+    {
+        result = R_DK2_ERR_FORMAT;
         goto func_end;
     }
 
@@ -1372,72 +1603,104 @@ static int32_t analyze_config(const void *const pconfig)
 func_end:
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function analyze_config
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: analyze_common_section
 * Description  : Read common section from configuration data.
-* Arguments    : None.
+* Arguments    : crc_check - Whether or not to check CRC.
+*                pinfo - Address of parser information.
+*                presult - Result of analysis.
 * Return Value : Error code.
-*******************************************************************************/
-static int32_t analyze_common_section(void)
+**********************************************************************************************************************/
+static int32_t analyze_common_section(
+    const bool crc_check, config_parser_info_t *const pinfo, config_dat_info_t *const presult)
 {
     int32_t result = R_DK2_SUCCESS;
+    const uint8_t *p_config;
     uint16_t expected_major_ver = 2;
     uint8_t expected_fixed_num = 0;
     uint8_t expected_reloc_num = 0;
     uint8_t expected_stp_num = 1;
+    uint32_t crc_calc = 0;
+    uint32_t crc_dat;
 
-    result = read_config_section(COMMON_SECTION_ID);
+    if ((NULL == pinfo) || (NULL == presult))
+    {
+        result = R_DK2_ERR_INTERNAL;
+        goto func_end;
+    }
+
+    p_config = pinfo->p_config;
+
+    if (NULL == p_config)
+    {
+        result = R_DK2_ERR_INTERNAL;
+        goto func_end;
+    }
+
+    result = read_config_section(COMMON_SECTION_ID, pinfo);
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_hword(&minor_ver_dat, NULL); /* minor version */
+
+    if (false != crc_check)
+    {
+        crc_calc = calc_crc(&p_config[pinfo->index - pinfo->section_index], pinfo->section_size - SECTION_CRC_LEN);
+    }
+
+    result = read_config_hword(&presult->minor_ver, NULL, pinfo); /* minor version */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_hword(NULL, &expected_major_ver); /* major version */
+    result = read_config_hword(NULL, &expected_major_ver, pinfo); /* major version */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_data(NULL, BYTE_NUM_OF_WORD); /* vendor ID */
+    result = read_config_data(NULL, BYTE_NUM_OF_WORD, pinfo); /* vendor ID */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_data(NULL, TARGET_DEVIVCE_LEN); /* target device */
+    result = read_config_data(NULL, TARGET_DEVIVCE_LEN, pinfo); /* target device */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_byte(NULL, &expected_fixed_num); /* number of fixed data */
+    result = read_config_byte(NULL, &expected_fixed_num, pinfo); /* number of fixed data */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_byte(NULL, &expected_reloc_num); /* number of relocatable data */
+    result = read_config_byte(NULL, &expected_reloc_num, pinfo); /* number of relocatable data */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_byte(NULL, &expected_stp_num); /* number of STP-type data num */
+    result = read_config_byte(NULL, &expected_stp_num, pinfo); /* number of STP-type data num */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_data(NULL, COMMON_RESERVE_LEN); /* reserved */
+    result = read_config_data(NULL, COMMON_RESERVE_LEN, pinfo); /* reserved */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_data(NULL, BYTE_NUM_OF_WORD); /* CRC */
+
+    result = read_config_word(&crc_dat, NULL, pinfo); /* CRC */
     if (R_DK2_SUCCESS != result)
     {
+        goto func_end;
+    }
+    if ((false != crc_check) && (crc_dat != crc_calc))
+    {
+        result = R_DK2_ERR_CRC;
         goto func_end;
     }
 
@@ -1446,153 +1709,226 @@ static int32_t analyze_common_section(void)
 func_end:
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function analyze_common_section
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: analyze_stp_section
 * Description  : Read STP-type data section from configuration data.
-* Arguments    : None.
+* Arguments    : pname - Address of name buffer.
+*                crc_check - Whether or not to check CRC.
+*                pinfo - Address of parser information.
+*                presult - Result of analysis.
 * Return Value : Error code.
-*******************************************************************************/
-static int32_t analyze_stp_section(void)
+**********************************************************************************************************************/
+static int32_t analyze_stp_section(dk2_char_t *const pname, const bool crc_check, config_parser_info_t *const pinfo,
+    config_dat_info_t *const presult)
 {
     int32_t result = R_DK2_SUCCESS;
+    const uint8_t *p_config;
+    uint32_t crc_calc = 0;
+    uint32_t crc_dat;
+    uint32_t padding;
 
-    result = read_config_section(STP_SECTION_ID);
+    if ((NULL == pinfo) || (NULL == presult))
+    {
+        result = R_DK2_ERR_INTERNAL;
+        goto func_end;
+    }
+
+    p_config = pinfo->p_config;
+
+    if (NULL == p_config)
+    {
+        result = R_DK2_ERR_INTERNAL;
+        goto func_end;
+    }
+
+    result = read_config_section(STP_SECTION_ID, pinfo);
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_data(NULL, BYTE_NUM_OF_WORD); /* application code */
+
+    if (false != crc_check)
+    {
+        crc_calc = calc_crc(&p_config[pinfo->index - pinfo->section_index],
+            (pinfo->section_size - SECTION_CRC_LEN) - SECTION_DII_LEN);
+    }
+
+    result = read_config_word(&presult->cid, NULL, pinfo); /* configuration ID */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_word(&u64config_num, NULL); /* number of data */
+    result = read_config_word(&presult->array_num, NULL, pinfo); /* number of data */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_byte(&tile_num_dat, NULL); /* number of tiles */
+    result = read_config_byte(&presult->tile_num, NULL, pinfo); /* number of tiles */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_byte(&del_zero_dat, NULL); /* delete zero data */
+    result = read_config_byte(&presult->del_zero, NULL, pinfo); /* delete zero data */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_byte(&dfc_dat, NULL); /* dfc */
+    result = read_config_byte(&presult->dfc, NULL, pinfo); /* dfc */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_data(NULL, 1); /* reserved */
+    result = read_config_data(NULL, 1, pinfo); /* reserved */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_word(&freq_dat, NULL); /* frequency */
+    result = read_config_word(&presult->freq, NULL, pinfo); /* frequency */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_hword(&context_dat, NULL); /* context */
+    result = read_config_hword(&presult->context, NULL, pinfo); /* context */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_hword(&state_dat, NULL); /* state */
+    result = read_config_hword(&presult->state, NULL, pinfo); /* state */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_data(NULL, 4); /* reserved */
+    result = read_config_data(NULL, 4, pinfo); /* reserved */
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    result = read_config_str(NULL, 32);
+    result = read_config_str(&pname[0], NULL, SECTION_NAME_LEN, pinfo);
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
     }
-    pu64config = (uint64_t *)&pu8config[config_index];
+    presult->p_array = (uint32_t *)&p_config[pinfo->index];
+
+    result = read_config_data(NULL, presult->array_num * U64_DATA_SIZE, pinfo); /* data */
+    if (R_DK2_SUCCESS != result)
+    {
+        goto func_end;
+    }
+
+    padding = ((CONFIG_ALIGN - (pinfo->section_index & CONFIG_ALIGN_MASK)) - SECTION_CRC_LEN) & CONFIG_ALIGN_MASK;
+    result = read_config_data(NULL, padding, pinfo); /* padding */
+    if (R_DK2_SUCCESS != result)
+    {
+        goto func_end;
+    }
+
+    result = read_config_word(&crc_dat, NULL, pinfo); /* CRC */
+    if (R_DK2_SUCCESS != result)
+    {
+        goto func_end;
+    }
+    if ((false != crc_check) && (crc_dat != crc_calc))
+    {
+        result = R_DK2_ERR_CRC;
+        goto func_end;
+    }
 
     goto func_end;
 
 func_end:
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function analyze_stp_section
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: init_config_parser
 * Description  : Initialize parser of configuration data.
 * Arguments    : pconfig - Address of configuration data.
+*                pinfo - Address of parser information.
 * Return Value : None.
-*******************************************************************************/
-static int32_t init_config_parser(const void *const pconfig)
+**********************************************************************************************************************/
+static int32_t init_config_parser(const void *const pconfig, config_parser_info_t *const pinfo)
 {
     int32_t result = R_DK2_SUCCESS;
-    
+
+    if (NULL == pinfo)
+    {
+        result = R_DK2_ERR_INTERNAL;
+        goto func_end;
+    }
+
     if ((NULL == pconfig) || (0 != ((uint32_t)pconfig & CONFIG_ALIGN_MASK)))
     {
         result = R_DK2_ERR_ARG;
+        goto func_end;
     }
-    else
-    {
-        section_size = 0;
-        config_index = 0;
-        section_index = 0;
-        pu8config = pconfig;
-    }
-    
+
+    pinfo->p_config = (uint8_t *)pconfig;
+    pinfo->index = 0;
+    pinfo->section_index = 0;
+    pinfo->section_size = 0;
+
+    goto func_end;
+
+func_end:
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function init_config_parser
-*******************************************************************************/
-/*******************************************************************************
+**********************************************************************************************************************/
+
+/**********************************************************************************************************************
 * Function Name: read_config_section
 * Description  : Read a section of configuration data.
 * Arguments    : pid - string of section ID.
+*                pinfo - Address of parser information.
 * Return Value : Error code.
-*******************************************************************************/
-static int32_t read_config_section(const dk2_char_t *const pid)
+**********************************************************************************************************************/
+static int32_t read_config_section(const dk2_char_t *const pid, config_parser_info_t *const pinfo)
 {
     int32_t result;
-    const uint8_t *pconfig = pu8config;
+    const uint8_t *p_config;
 
-    if (NULL == pconfig)
+    if (NULL == pinfo)
+    {
+        result = R_DK2_ERR_INTERNAL;
+        goto func_end;
+    }
+
+    p_config = pinfo->p_config;
+
+    if (NULL == p_config)
     {
         result = R_DK2_ERR_INTERNAL;
         goto func_end;
     }
 
     /* Skip inter-section gap */
-    if (section_index < section_size)
+    if (pinfo->section_index < pinfo->section_size)
     {
-        config_index += (section_size - section_index);
+        pinfo->index += (pinfo->section_size - pinfo->section_index);
     }
 
-    if (0 != (config_index & CONFIG_ALIGN_MASK))
+    if (0 != (pinfo->index & CONFIG_ALIGN_MASK))
     {
         result = R_DK2_ERR_FORMAT;
         goto func_end;
     }
 
-    section_size = *(const uint32_t *)&pconfig[config_index];
-    config_index += SECTION_ID_LEN;
-    section_index = SECTION_ID_LEN;
+    pinfo->section_size = *(const uint32_t *)&p_config[pinfo->index];
+
+    pinfo->index += SECTION_SIZE_LEN;
+    pinfo->section_index = SECTION_SIZE_LEN;
 
     /* read section id */
-    result = read_config_str(pid, SECTION_ID_LEN);
+    result = read_config_str(NULL, pid, SECTION_ID_LEN, pinfo);
     if (R_DK2_SUCCESS != result)
     {
         goto func_end;
@@ -1603,36 +1939,46 @@ static int32_t read_config_section(const dk2_char_t *const pid)
 func_end:
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function read_config_section
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: read_config_word
 * Description  : Read 32 bit data from configuration data.
 * Arguments    : pword - Address of 32 bit data.
 *                pexpeced - Address of expected data.
+*                pinfo - Address of parser information.
 * Return Value : Error code.
-*******************************************************************************/
-static int32_t read_config_word(uint32_t *const pword, const uint32_t *const pexpected)
+**********************************************************************************************************************/
+static int32_t read_config_word(uint32_t *const pword, const uint32_t *const pexpected,
+    config_parser_info_t *const pinfo)
 {
     int32_t result = R_DK2_SUCCESS;
-    const uint8_t *pconfig = pu8config;
+    const uint8_t *p_config;
     uint32_t word;
 
-    if (NULL == pconfig)
+    if (NULL == pinfo)
     {
         result = R_DK2_ERR_INTERNAL;
         goto func_end;
     }
 
-    if ((section_index + sizeof(uint32_t)) > section_size)
+    p_config = pinfo->p_config;
+
+    if (NULL == p_config)
+    {
+        result = R_DK2_ERR_INTERNAL;
+        goto func_end;
+    }
+
+    if ((pinfo->section_index + sizeof(uint32_t)) > pinfo->section_size)
     {
         result = R_DK2_ERR_FORMAT;
         goto func_end;
     }
 
-    word = *(const uint32_t *)&pconfig[config_index];
+    word = *(const uint32_t *)&p_config[pinfo->index];
 
     if (NULL != pword)
     {
@@ -1648,44 +1994,54 @@ static int32_t read_config_word(uint32_t *const pword, const uint32_t *const pex
         }
     }
 
-    config_index += sizeof(uint32_t);
-    section_index += sizeof(uint32_t);
+    pinfo->index += sizeof(uint32_t);
+    pinfo->section_index += sizeof(uint32_t);
 
     goto func_end;
 
 func_end:
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function read_config_word
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: read_config_hword
 * Description  : Read 16 bit data from configuration data.
 * Arguments    : pword - Address of 16 bit data.
 *                pexpeced - Address of expected data.
+*                pinfo - Address of parser information.
 * Return Value : Error code.
-*******************************************************************************/
-static int32_t read_config_hword(uint16_t *const phword, const uint16_t *const pexpected)
+**********************************************************************************************************************/
+static int32_t read_config_hword(uint16_t *const phword, const uint16_t *const pexpected,
+    config_parser_info_t *const pinfo)
 {
     int32_t result = R_DK2_SUCCESS;
-    const uint8_t *pconfig = pu8config;
+    const uint8_t *p_config;
     uint16_t hword;
 
-    if (NULL == pconfig)
+    if (NULL == pinfo)
     {
         result = R_DK2_ERR_INTERNAL;
         goto func_end;
     }
 
-    if ((section_index + sizeof(uint16_t)) > section_size)
+    p_config = pinfo->p_config;
+
+    if (NULL == p_config)
+    {
+        result = R_DK2_ERR_INTERNAL;
+        goto func_end;
+    }
+
+    if ((pinfo->section_index + sizeof(uint16_t)) > pinfo->section_size)
     {
         result = R_DK2_ERR_FORMAT;
         goto func_end;
     }
 
-    hword = *(const uint16_t *)&pconfig[config_index];
+    hword = *(const uint16_t *)&p_config[pinfo->index];
 
     if (NULL != phword)
     {
@@ -1701,44 +2057,54 @@ static int32_t read_config_hword(uint16_t *const phword, const uint16_t *const p
         }
     }
 
-    config_index += sizeof(uint16_t);
-    section_index += sizeof(uint16_t);
+    pinfo->index += sizeof(uint16_t);
+    pinfo->section_index += sizeof(uint16_t);
 
     goto func_end;
 
 func_end:
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function read_config_hword
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: read_config_byte
 * Description  : Read 8 bit data from configuration data.
 * Arguments    : pword - Address of 8 bit data.
 *                pexpeced - Address of expected data.
+*                pinfo - Address of parser information.
 * Return Value : Error code.
-*******************************************************************************/
-static int32_t read_config_byte(uint8_t *const pbyte, const uint8_t *const pexpected)
+**********************************************************************************************************************/
+static int32_t read_config_byte(uint8_t *const pbyte, const uint8_t *const pexpected,
+    config_parser_info_t *const pinfo)
 {
     int32_t result = R_DK2_SUCCESS;
-    const uint8_t *pconfig = pu8config;
+    const uint8_t *p_config;
     uint8_t byte;
 
-    if (NULL == pconfig)
+    if (NULL == pinfo)
     {
         result = R_DK2_ERR_INTERNAL;
         goto func_end;
     }
 
-    if ((section_index + sizeof(uint8_t)) > section_size)
+    p_config = pinfo->p_config;
+
+    if (NULL == p_config)
+    {
+        result = R_DK2_ERR_INTERNAL;
+        goto func_end;
+    }
+
+    if ((pinfo->section_index + sizeof(uint8_t)) > pinfo->section_size)
     {
         result = R_DK2_ERR_FORMAT;
         goto func_end;
     }
 
-    byte = pconfig[config_index];
+    byte = p_config[pinfo->index];
 
     if (NULL != pbyte)
     {
@@ -1754,50 +2120,66 @@ static int32_t read_config_byte(uint8_t *const pbyte, const uint8_t *const pexpe
         }
     }
 
-    config_index += sizeof(uint8_t);
-    section_index += sizeof(uint8_t);
+    pinfo->index += sizeof(uint8_t);
+    pinfo->section_index += sizeof(uint8_t);
 
     goto func_end;
 
 func_end:
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function read_config_byte
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: read_config_str
 * Description  : Read string data from configuration data.
-* Arguments    : pexpeced - Address of expected data.
+* Arguments    : pstr - Address of string data.
+*                pexpeced - Address of expected data.
 *                size - Size of string data.
+*                pinfo - Address of parser information.
 * Return Value : Error code.
-*******************************************************************************/
-static int32_t read_config_str(const dk2_char_t *const pexpeced, const uint32_t size)
+**********************************************************************************************************************/
+static int32_t read_config_str(dk2_char_t *const pstr, const dk2_char_t *const pexpeced, const uint32_t size,
+    config_parser_info_t *const pinfo)
 {
     int32_t result = R_DK2_SUCCESS;
-    const uint8_t *pconfig = pu8config;
+    const uint8_t *p_config;
+    uint32_t index;
 
-    if (NULL == pconfig)
+    if (NULL == pinfo)
     {
         result = R_DK2_ERR_INTERNAL;
         goto func_end;
     }
 
-    if ((section_index + size) > section_size)
+    p_config = pinfo->p_config;
+
+    if (NULL == p_config)
+    {
+        result = R_DK2_ERR_INTERNAL;
+        goto func_end;
+    }
+
+    if ((pinfo->section_index + size) > pinfo->section_size)
     {
         result = R_DK2_ERR_FORMAT;
         goto func_end;
     }
 
-    /* if pexpeced is not NULL, compare with expected data. */
-    if (NULL != pexpeced)
+    for (index = 0;index < size; index++)
     {
-        uint32_t index;
-
-        for (index = 0;index < size; index++)
+        /* if pstr is not NULL, copy to pstr. */
+        if (NULL != pstr)
         {
-            if (pconfig[config_index + index] != pexpeced[index])
+            pstr[index] = p_config[pinfo->index + index];
+        }
+
+        /* if pexpeced is not NULL, compare with expected data. */
+        if (NULL != pexpeced)
+        {
+            if (p_config[pinfo->index + index] != pexpeced[index])
             {
                 result = R_DK2_ERR_FORMAT;
                 goto func_end;
@@ -1805,37 +2187,46 @@ static int32_t read_config_str(const dk2_char_t *const pexpeced, const uint32_t 
         }
     }
 
-    config_index += size;
-    section_index += size;
+    pinfo->index += size;
+    pinfo->section_index += size;
 
     goto func_end;
 
 func_end:
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function read_config_str
-*******************************************************************************/
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: read_config_data
 * Description  : Get current address and skip "size" bytes.
 * Arguments    : pdata - Address of configuration data pointer.
 *                size - Size of skip.
+*                pinfo - Address of parser information.
 * Return Value : Error code.
-*******************************************************************************/
-static int32_t read_config_data(const uint32_t **const pdata, const uint32_t size)
+**********************************************************************************************************************/
+static int32_t read_config_data(const uint32_t **const pdata, const uint32_t size, config_parser_info_t *const pinfo)
 {
     int32_t result = R_DK2_SUCCESS;
-    const uint8_t *pconfig = pu8config;
+    const uint8_t *p_config;
 
-    if (NULL == pconfig)
+    if (NULL == pinfo)
     {
         result = R_DK2_ERR_INTERNAL;
         goto func_end;
     }
 
-    if ((section_index + size) > section_size)
+    p_config = pinfo->p_config;
+
+    if (NULL == p_config)
+    {
+        result = R_DK2_ERR_INTERNAL;
+        goto func_end;
+    }
+
+    if ((pinfo->section_index + size) > pinfo->section_size)
     {
         result = R_DK2_ERR_FORMAT;
         goto func_end;
@@ -1843,29 +2234,27 @@ static int32_t read_config_data(const uint32_t **const pdata, const uint32_t siz
 
     if (NULL != pdata)
     {
-        *pdata = (const uint32_t *)&pconfig[config_index];
+        *pdata = (const uint32_t *)&p_config[pinfo->index];
     }
-    config_index += size;
-    section_index += size;
+    pinfo->index += size;
+    pinfo->section_index += size;
 
     goto func_end;
 
 func_end:
     return result;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function read_config_data
-*******************************************************************************/
+**********************************************************************************************************************/
 
-#if(1) /* for mbed */
-#else
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: calc_crc
 * Description  : Calculate CRC.
 * Arguments    : buf - Data pointer.
 *                len - Length of CRC data.
 * Return Value : CRC value.
-*******************************************************************************/
+**********************************************************************************************************************/
 static uint32_t calc_crc(const uint8_t *const buf, const uint32_t len)
 {
     uint32_t result = CRC32_INITIAL_VALUE;
@@ -1890,17 +2279,16 @@ static uint32_t calc_crc(const uint8_t *const buf, const uint32_t len)
     }
     return result ^ CRC32_XOR_VALUE;
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function calc_crc
-*******************************************************************************/
-#endif
+**********************************************************************************************************************/
 
-/*******************************************************************************
+/**********************************************************************************************************************
 * Function Name: dk2_nmlint_isr
 * Description  : Interrupt function of DRP.
 * Arguments    : int_sense - Sense of interrupt.
 * Return Value : None.
-*******************************************************************************/
+**********************************************************************************************************************/
 #if(1) /* for mbed */
 static void dk2_nmlint_isr(void)
 #else
@@ -1910,31 +2298,87 @@ static void dk2_nmlint_isr(uint32_t int_sense)
     uint32_t int_status;
     uint8_t id;
     int32_t tile_index;
-    
+    uint8_t int_count;
+    int32_t int_tile = R_DK2_TILE_NUM;
+
     int_status = R_DK2_CORE_GetInt();
-    
-    id = 0;
-    for (tile_index = 0; tile_index < R_DK2_TILE_NUM; tile_index++)
+    int_status = (int_status >> INT_STATUS_SHIFT) & INT_CH_MASK;
+
+    while (int_status != 0)
     {
-        if (0 != ((int_status >> (tile_index + 16)) & R_DK2_TILE_0))
+        /* Search ID and interrupt count of DRP circuit which cause interrupt. */
+        id = 0;
+        int_count = 0;
+        for (tile_index = 0; tile_index < R_DK2_TILE_NUM; tile_index++)
         {
-            id = astart[tile_index];
-            astart[tile_index] = 0;
-            
-            /* callback here */
-            if (NULL != apint[tile_index])
+            if ((int_status & (uint32_t)(R_DK2_TILE_0 << tile_index)) != 0)
             {
-                apint[tile_index](id);
+                int_status &= ~((uint32_t)(R_DK2_TILE_0 << tile_index));
+                id = astart[tile_index];
+                int_count = acount[tile_index];
+                break;
+            }
+            else
+            {
+                /* DO NOTHING */
             }
         }
-        else if ((0 != id) && (astart[tile_index] == id))
+        if ((id == 0) || (int_count == 0))
         {
-            astart[tile_index] = 0;
+            continue;
+        }
+        else
+        {
+            /* DO NOTHING */
+        }
+
+        int_tile = tile_index;  /* Save tile number where interrupt occurs. */
+        int_count--;
+
+        /* Update acount. */
+        for (tile_index = 0; tile_index < R_DK2_TILE_NUM; tile_index++)
+        {
+            if (astart[tile_index] == id)
+            {
+                acount[tile_index] = int_count;
+            }
+            else
+            {
+                /* DO NOTHING */
+            }
+        }
+
+        /* Update astart and callback. */
+        if (int_count == 0)
+        {
+            for (tile_index = 0; tile_index < R_DK2_TILE_NUM; tile_index++)
+            {
+                if (astart[tile_index] == id)
+                {
+                    astart[tile_index] = 0;
+                }
+                else
+                {
+                    /* DO NOTHING */
+                }
+            }
+            if((int_tile < R_DK2_TILE_NUM) && (apint[int_tile] != NULL))
+            {
+                apint[int_tile](id);
+            }
+            else
+            {
+                /* DO NOTHING */
+            }
+        }
+        else
+        {
+            /* DO NOTHING */
         }
     }
 }
-/*******************************************************************************
+/**********************************************************************************************************************
 End of function dk2_nmlint_isr
-*******************************************************************************/
+**********************************************************************************************************************/
 
 /* End of File */
