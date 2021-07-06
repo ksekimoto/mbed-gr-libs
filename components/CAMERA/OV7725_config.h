@@ -5,42 +5,44 @@
 #include "mbed.h"
 #include "camera_config.h"
 #include "sccb.h"
+#include "OV7725_regs.h"
 
 /* OV7725 camera input config */
 static const char OV7725_InitRegTable[][2] = {
-    { 0x0D, 0x41 }, /* COM4 PLL 4x, Full Window, default=0x41 */
-    { 0x0F, 0xC5 }, /* COM6 ??? */
+    { OV7725_COM4, 0x41 }, /* COM4 PLL 4x, Full Window, default=0x41 */
+    { OV7725_COM6, 0xC5 }, /* COM6 ??? */
 #if 0 /* 30fps(24MHz) */
     {   0x11, 0x01}, /* CLKRC internal clock pre-scaler */
 #else /* 60fps(48MHz) */
-    { 0x11, 0x00 }, /* CLKRC  internal clock pre-scaler*/
+    { OV7725_CLKRC, 0x00 }, /* CLKRC  internal clock pre-scaler*/
 #endif
-    { 0x14, 0x1F }, /* COM9 Drop VSYNC/HREF default=0x4a */
-    { 0x15, 0x40 }, /* COM10 HSYNC default=0x00 */
-    { 0x17, 0x22 }, /* HSTART 0x23:VGA, 0x3F:QVGA, [1:0]->HREF[5:4] */
-    { 0x18, 0xA4 }, /* HSIZE 0xA0:VGA, 0x60:QVGA, [1:0]->HREF[1:0] */
-    { 0x19, 0x07 }, /* VSTRT 0x07:VGA, 0x03:QVGA, [0]->HREF[6] */
-    { 0x1A, 0xF0 }, /* VSIZE 0xf0:VGA, 0x78:QVGA, [0]->HREF[2] */
-    { 0x22, 0x99 }, /* BDBase */
-    { 0x23, 0x02 }, /* BDMStep */
-    { 0x24, 0x60 }, /* AEW */
-    { 0x25, 0x50 }, /* AEB */
-    { 0x26, 0xA1 }, /* VPT */
-    { 0x29, 0xA0 }, /* HOutSize */
-    { 0x2A, 0x00 }, /* EXHCH EXHCH, default=0x00 */
-    { 0x2B, 0x00 }, /* EXHCL EXHCH, default=0x00 */
-    { 0x2C, 0xF0 }, /* VOutSize */
-    { 0x32, 0x00 }, /* HREF */
-    { 0x33, 0x01 }, /* DM_LNL */
-    { 0x3D, 0x03 }, /* COM12 */
-    { 0x42, 0x7F }, /* TGT_B */
-    { 0x4D, 0x09 }, /* FixGain */
-    { 0x63, 0xE0 }, /* AWB_Ctrl0 */
-    { 0x64, 0xFF }, /* DSP_Ctrl1 */
-    { 0x65, 0x20 }, /* DSP_Ctrl2 */
-    { 0x66, 0x00 }, /* DSP_Ctrl3 */
-    { 0x67, 0x48 }, /* DSP_Ctrl4 */
-    { 0x6B, 0xAA }, /* AWBCtrl3 */
+    // COM7 0x12 - 0x80 GBR422, YUV
+    { OV7725_COM9, 0x1F },      /* COM9 Drop VSYNC/HREF default=0x4a */
+    { OV7725_COM10, 0x40 },     /* COM10 HSYNC default=0x00 */
+    { OV7725_HSTART, 0x22 },    /* HSTART 0x23:VGA, 0x3F:QVGA, [1:0]->HREF[5:4] */
+    { OV7725_HSIZE, 0xA4 },     /* HSIZE 0xA0:VGA, 0x60:QVGA, [1:0]->HREF[1:0] */
+    { OV7725_VSTART, 0x07 },    /* VSTRT 0x07:VGA, 0x03:QVGA, [0]->HREF[6] */
+    { OV7725_VSIZE, 0xF0 },     /* VSIZE 0xf0:VGA, 0x78:QVGA, [0]->HREF[2] */
+    { OV7725_BDBASE, 0x99 },    /* BDBase */
+    { OV7725_DBSTEP, 0x02 },    /* BDMStep */
+    { OV7725_AEW, 0x60 },       /* AEW */
+    { OV7725_AEB, 0x50 },       /* AEB */
+    { OV7725_VPT, 0xA1 },       /* VPT */
+    { OV7725_HOUTSIZE, 0xA0 },  /* HOutSize */
+    { OV7725_EXHCH, 0x00 },     /* EXHCH EXHCH, default=0x00 */
+    { OV7725_EXHCL, 0x00 },     /* EXHCL EXHCH, default=0x00 */
+    { OV7725_VOUTSIZE, 0xF0 },  /* VOutSize */
+    { OV7725_HREF, 0x00 },      /* HREF */
+    { OV7725_DM_LNL, 0x01 },    /* DM_LNL */
+    { OV7725_COM12, 0x03 },     /* COM12 */
+    { OV7725_TGT_B, 0x7F },     /* TGT_B */
+    { OV7725_FIXGAIN, 0x09 },   /* FixGain */
+    { OV7725_AWB_CTRL0, 0xE0 }, /* AWB_Ctrl0 */
+    { OV7725_DSP_CTRL1, 0xFF }, /* DSP_Ctrl1 */
+    { OV7725_DSP_CTRL2, 0x20 }, /* DSP_Ctrl2 */
+    { OV7725_DSP_CTRL3, 0x00 }, /* DSP_Ctrl3 */
+    { OV7725_DSP_CTRL4, 0x48 }, /* DSP_Ctrl4 [1:0] 00: YUV or RGB */
+    { OV7725_AWB_CTRL3, 0xAA }, /* AWBCtrl3 */
     { 0x7E, 0x04 }, /* GAM1 */
     { 0x7F, 0x0E }, /* GAM2 */
     { 0x80, 0x20 }, /* GAM3 */
